@@ -65,4 +65,4 @@ npx vsce package
 
 ---
 
-Developer: Hakki Etem 
+Developer: Hakkı Etem 
