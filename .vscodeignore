@@ -1,0 +1,46 @@
+# Source files
+src/**
+tsconfig.json
+.eslintrc.json
+*.ts
+
+# Git
+.git
+.gitignore
+.github
+
+# Build
+node_modules
+npm-debug.log*
+.npm
+*.tsbuildinfo
+
+# Auxiliary files
+.vscode
+.vscode-test
+coverage
+tmp
+temp
+**/*.map
+
+# Tests
+test/**
+**/*.spec.*
+**/*.test.*
+
+# Docs and assets not needed in package
+docs/**/*
+images/**/*
+!images/logo.png
+
+# Developer files
+.editorconfig
+.prettierrc
+.travis.yml
+.env*
+*.md
+!README.md
+!CHANGELOG.md
+
+# Packaging
+*.vsix 
