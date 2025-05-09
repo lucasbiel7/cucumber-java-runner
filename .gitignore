@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+.npm
+npm-debug.log*
+
+# Build outputs
+out/
+dist/
+
+# VSCode extension development
+.vscode-test/
+*.vsix
+
+# VS Code environment files
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# TypeScript compilation cache
+*.tsbuildinfo
+
+# OS generated files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Log files
+*.log
+logs/
+
+# Test coverage reports
+coverage/
+
+# Temporary files
+tmp/
+temp/ 
