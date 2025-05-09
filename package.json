@@ -1,0 +1,84 @@
+{
+  "name": "cucumber-java-easy-runner",
+  "displayName": "Cucumber Java Easy Runner",
+  "description": "VS Code extension for easily running Cucumber Feature files in Java projects",
+  "version": "0.0.1",
+  "publisher": "Hakki Etem",
+  "author": {
+    "name": "Hakki Etem"
+  },
+  "engines": {
+    "vscode": "^1.96.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hakkietem350/Cucumber-Java-Easy-Runner.git"
+  },
+  "categories": [
+    "Other",
+    "Testing"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "cucumberJavaEasyRunner.runFeature",
+        "title": "Cucumber: Run Feature"
+      },
+      {
+        "command": "cucumberJavaEasyRunner.runScenario",
+        "title": "Cucumber: Run Scenario"
+      },
+      {
+        "command": "cucumberJavaEasyRunner.runExample",
+        "title": "Cucumber: Run Example"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "when": "resourceExtname == .feature",
+          "command": "cucumberJavaEasyRunner.runFeature",
+          "group": "navigation"
+        }
+      ],
+      "editor/context": [
+        {
+          "when": "resourceExtname == .feature",
+          "command": "cucumberJavaEasyRunner.runFeature",
+          "group": "1_cucumber@1"
+        },
+        {
+          "when": "resourceExtname == .feature",
+          "command": "cucumberJavaEasyRunner.runScenario",
+          "group": "1_cucumber@2"
+        },
+        {
+          "when": "resourceExtname == .feature",
+          "command": "cucumberJavaEasyRunner.runExample",
+          "group": "1_cucumber@3"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.96.0",
+    "@types/glob": "^8.1.0",
+    "@types/mocha": "^10.0.1",
+    "@types/node": "16.x",
+    "typescript": "^5.0.4",
+    "eslint": "^8.39.0",
+    "glob": "^8.1.0",
+    "@typescript-eslint/eslint-plugin": "^5.59.1",
+    "@typescript-eslint/parser": "^5.59.1"
+  }
+}
