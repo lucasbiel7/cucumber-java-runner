@@ -7,6 +7,7 @@
   "author": {
     "name": "Hakki Etem"
   },
+  "icon": "images/logo.png",
   "engines": {
     "vscode": "^1.96.0"
   },
@@ -15,8 +16,20 @@
     "url": "https://github.com/hakkietem350/Cucumber-Java-Easy-Runner.git"
   },
   "categories": [
-    "Other",
-    "Testing"
+    "Testing",
+    "Debuggers",
+    "Programming Languages",
+    "Other"
+  ],
+  "keywords": [
+    "cucumber",
+    "java",
+    "test",
+    "bdd",
+    "gherkin",
+    "feature",
+    "runner",
+    "testing"
   ],
   "activationEvents": [],
   "main": "./out/extension.js",

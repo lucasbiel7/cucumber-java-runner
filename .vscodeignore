@@ -30,7 +30,8 @@ test/**
 
 # Docs and assets not needed in package
 docs/**/*
-images/**/*
+# Ignore all images except logo.png
+images/**
 !images/logo.png
 
 # Developer files
