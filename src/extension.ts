@@ -297,14 +297,52 @@ async function findStepsDir(dir: string): Promise<string | null> {
   
   // First check if current directory is a steps folder
   if (dir.endsWith('steps') || dir.endsWith('step')) {
-    // Check if it contains Java files
+    // Check if it contains Java files directly
     const hasJavaFiles = entries.some(entry => !entry.isDirectory() && entry.name.endsWith('.java'));
-    if (hasJavaFiles) {
+    
+    // Check Java files in subdirectories
+    if (!hasJavaFiles) {
+      // Recursive inner function to check directories
+      const checkSubDirsForJavaFiles = (subDir: string): boolean => {
+        const subEntries = fs.readdirSync(subDir, { withFileTypes: true });
+        
+        // Does this subdirectory have Java files?
+        const hasDirectJavaFiles = subEntries.some(entry => !entry.isDirectory() && entry.name.endsWith('.java'));
+        if (hasDirectJavaFiles) {
+          return true;
+        }
+        
+        // Check deeper subdirectories if they exist
+        for (const entry of subEntries) {
+          if (entry.isDirectory()) {
+            const hasJavaInSubDir = checkSubDirsForJavaFiles(path.join(subDir, entry.name));
+            if (hasJavaInSubDir) {
+              return true;
+            }
+          }
+        }
+        
+        return false;
+      };
+      
+      // Accept this directory if subdirectories contain Java files
+      const hasJavaFilesInSubDirs = entries.some(entry => {
+        if (entry.isDirectory()) {
+          return checkSubDirsForJavaFiles(path.join(dir, entry.name));
+        }
+        return false;
+      });
+      
+      if (hasJavaFilesInSubDirs) {
+        return dir;
+      }
+    } else {
+      // If Java files exist directly in the directory
       return dir;
     }
   }
   
-  // Search in subdirectories
+  // If nothing found, search in subdirectories
   for (const entry of entries) {
     if (entry.isDirectory()) {
       const subDir = path.join(dir, entry.name);
