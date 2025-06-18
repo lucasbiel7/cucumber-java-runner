@@ -9,66 +9,81 @@ A VS Code extension that allows you to easily run Cucumber feature files in Java
 - 🥒 **Run the entire feature file**: Right-click on a feature file in the explorer or in the context menu when open in the editor to run the entire feature file
 - 🔍 **Run a single scenario**: Right-click on a specific scenario or scenario outline to run only that scenario
 - 📋 **Run example rows**: Select a specific example row in a Scenario Outline to run only that example
+- ▶️ **CodeLens Play Buttons**: Interactive play buttons appear directly on Feature, Scenario, and Example lines for one-click execution (similar to IntelliJ IDEA and JUnit in VS Code)
+
 - 🔄 **Automatic configuration**: Automatically detects glue path, no manual configuration required
 - ⚡ **Fast execution**: Provides fast execution by directly using the Cucumber CLI in Maven projects
 - 🚫 **No dependencies**: Works without additional plugins or dependencies
 
 ## 🚀 Usage
 
-### 1. Running a Feature File
-   - Right-click on a `.feature` file in the file explorer and select "Cucumber: Run Feature", or
-   - Right-click in an open feature file and select "Cucumber: Run Feature"
+### 1. CodeLens Play Buttons (Recommended)
 
-   Example of context menu:
-   ```
-   ┌─────────────────────────────┐
-   │   ✂️ Cut                    │
-   │   📋 Copy                   │
-   │   📋 Paste                  │
-   │   ────────────────────────  │
-   │ ▶️ Cucumber: Run Feature    │
-   │ ▶️ Cucumber: Run Scenario   │
-   │ ▶️ Cucumber: Run Example    │
-   │   ────────────────────────  │
-   │   📝 Open to the Side       │
-   └─────────────────────────────┘
-   ```
+The extension automatically adds clickable play buttons directly on your feature file lines:
 
-### 2. Running a Specific Scenario
-   - Right-click inside a scenario in an open feature file and select "Cucumber: Run Scenario"
+- **$(play-circle)** - Appears on `Feature:` lines to run the entire feature
+- **$(play)** - Appears on `Scenario:` and `Scenario Outline:` lines to run individual scenarios
+- **$(debug-start)** - Appears on example data rows to run specific examples
 
-   Example feature file with cursor position for running a scenario:
-   ```gherkin
-   Feature: Shopping Cart
+Example feature file with CodeLens buttons:
+```gherkin
+$(play-circle) Feature: Shopping Cart
 
-     Scenario: Adding an item to cart       <- Right-click here to run this scenario
-       Given I am on the product page
-       When I click "Add to Cart"
-       Then the item should be added to my cart
-       And the cart count should be updated
+  $(play) Scenario: Adding an item to cart
+    Given I am on the product page
+    When I click "Add to Cart"
+    Then the item should be added to my cart
+    And the cart count should be updated
 
-     Scenario: Removing an item from cart
-       Given I have an item in my cart
-       When I remove the item
-       Then my cart should be empty
-   ```
+  $(play) Scenario Outline: User login with different credentials
+    Given I am on the login page
+    When I enter "<username>" and "<password>"
+    Then I should see the "<result>" message
 
-### 3. Running a Specific Example
-   - Right-click on a data row in an Examples table in an open feature file and select "Cucumber: Run Example"
+    Examples:
+      | username | password | result       |
+      $(debug-start) | admin    | admin123 | Welcome!     |
+      $(debug-start) | user1    | pass123  | Welcome!     |
+      $(debug-start) | invalid  | wrong    | Access Denied|
+```
 
-   Example of running a specific data row:
-   ```gherkin
-   Scenario Outline: User login with different credentials
-     Given I am on the login page
-     When I enter "<username>" and "<password>"
-     Then I should see the "<result>" message
+### 2. Context Menu Options
 
-     Examples:
-       | username | password | result       |
-       | admin    | admin123 | Welcome!     |  <- Right-click on this row to run this example
-       | user1    | pass123  | Welcome!     |
-       | invalid  | wrong    | Access Denied|
-   ```
+You can also use traditional right-click context menus:
+
+- Right-click on a `.feature` file in the file explorer and select "Cucumber: Run Feature"
+- Right-click in an open feature file and select "Cucumber: Run Feature", "Cucumber: Run Scenario", or "Cucumber: Run Example"
+
+Example of context menu:
+```
+┌─────────────────────────────┐
+│   ✂️ Cut                    │
+│   📋 Copy                   │
+│   📋 Paste                  │
+│   ────────────────────────  │
+│ ▶️ Cucumber: Run Feature    │
+│ ▶️ Cucumber: Run Scenario   │
+│ ▶️ Cucumber: Run Example    │
+│   ────────────────────────  │
+│   📝 Open to the Side       │
+└─────────────────────────────┘
+```
+
+## 🎨 Customization
+
+### Button Colors
+
+You can customize the color of the CodeLens play buttons by adding this to your settings.json:
+
+```json
+{
+  "workbench.colorCustomizations": {
+    "editorCodeLens.foreground": "#22C55E"
+  }
+}
+```
+
+**Note**: If you don't set a custom color, VS Code's default CodeLens color will be used.
 
 ## 📦 Installation
 
@@ -99,9 +114,11 @@ This extension works out of the box with standard Maven project structures. Howe
 
 - The extension will automatically detect the glue path for your step definitions
 - If the automatic detection fails, you'll be prompted to enter your glue path manually
+- CodeLens buttons are automatically enabled for all `.feature` files
 
 ## ❓ Troubleshooting
 
+- **CodeLens buttons not showing**: Make sure the extension is activated by opening a `.feature` file or running a Cucumber command
 - **Glue path not found error**: You will be asked to manually specify your glue path, e.g. `com.example.steps`
 - **Test execution error**: Make sure that the Maven structure is correct and that Cucumber dependencies are defined in pom.xml
 - **No Cucumber version found**: Ensure that your project has Cucumber dependencies in the pom.xml file
@@ -118,7 +135,7 @@ npm install
 npm run compile
 
 # Create the VSIX package
-npx vsce package
+npx vsce package --allow-star-activation
 ```
 
 ## 🔄 Reporting Issues

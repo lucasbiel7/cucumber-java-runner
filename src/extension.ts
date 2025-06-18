@@ -9,7 +9,157 @@ interface ScenarioInfo {
   exampleLineNumber?: number;
 }
 
+/**
+ * CodeLens provider for Cucumber feature files - with compact buttons
+ */
+class CucumberCodeLensProvider implements vscode.CodeLensProvider {
+  provideCodeLenses(document: vscode.TextDocument, token: vscode.CancellationToken): vscode.CodeLens[] {
+    const codeLenses: vscode.CodeLens[] = [];
+    
+    if (path.extname(document.uri.fsPath) !== '.feature') {
+      return codeLenses;
+    }
+
+    const text = document.getText();
+    const lines = text.split('\n');
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      
+      if (line.startsWith('Feature:')) {
+        // Position the button at the very beginning of the line
+        const range = new vscode.Range(i, 0, i, 0);
+        codeLenses.push(new vscode.CodeLens(range, {
+          title: '$(play-circle) ',
+          tooltip: 'Click to run the entire feature file',
+          command: 'cucumberJavaEasyRunner.runFeatureCodeLens',
+          arguments: [document.uri]
+        }));
+      } else if (line.startsWith('Scenario:') || line.startsWith('Scenario Outline:')) {
+        // Position the button at the very beginning of the line
+        const range = new vscode.Range(i, 0, i, 0);
+        codeLenses.push(new vscode.CodeLens(range, {
+          title: '$(play) ',
+          tooltip: 'Click to run this scenario',
+          command: 'cucumberJavaEasyRunner.runScenarioCodeLens',
+          arguments: [document.uri, i + 1] // 1-indexed line number
+        }));
+      } else if (line.startsWith('|') && i > 0) {
+        // Check if this is an example row (not header)
+        const exampleInfo = this.findExampleRowInfo(lines, i);
+        if (exampleInfo) {
+          const range = new vscode.Range(i, 0, i, 0);
+          codeLenses.push(new vscode.CodeLens(range, {
+            title: '$(debug-start) ',
+            tooltip: 'Click to run this example row',
+            command: 'cucumberJavaEasyRunner.runExampleCodeLens',
+            arguments: [document.uri, exampleInfo.scenarioLine, i + 1] // scenario line and example line
+          }));
+        }
+      }
+    }
+
+    return codeLenses;
+  }
+
+  private findExampleRowInfo(lines: string[], currentLine: number): { scenarioLine: number } | null {
+    // Go backwards to find Examples heading
+    let examplesLine = -1;
+    let headerLine = -1;
+    
+    for (let i = currentLine; i >= 0; i--) {
+      const line = lines[i].trim();
+      if (line.startsWith('Examples:')) {
+        examplesLine = i;
+        break;
+      }
+    }
+    
+    if (examplesLine === -1) {
+      return null;
+    }
+    
+    // Find the header row (first | line after Examples)
+    for (let i = examplesLine + 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (line.startsWith('|')) {
+        headerLine = i;
+        break;
+      }
+    }
+    
+    // Current line must be after header line to be a data row
+    if (headerLine === -1 || currentLine <= headerLine) {
+      return null;
+    }
+    
+    // Find the Scenario Outline
+    for (let i = examplesLine; i >= 0; i--) {
+      const line = lines[i].trim();
+      if (line.startsWith('Scenario Outline:')) {
+        return { scenarioLine: i + 1 }; // 1-indexed
+      }
+    }
+    
+    return null;
+  }
+}
+
+/**
+ * Finds example row info
+ */
+function findExampleRowInfo(lines: string[], currentLine: number): { scenarioLine: number } | null {
+  // Go backwards to find Examples heading
+  let examplesLine = -1;
+  let headerLine = -1;
+  
+  for (let i = currentLine; i >= 0; i--) {
+    const line = lines[i].trim();
+    if (line.startsWith('Examples:')) {
+      examplesLine = i;
+      break;
+    }
+  }
+  
+  if (examplesLine === -1) {
+    return null;
+  }
+  
+  // Find the header row (first | line after Examples)
+  for (let i = examplesLine + 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (line.startsWith('|')) {
+      headerLine = i;
+      break;
+    }
+  }
+  
+  // Current line must be after header line to be a data row
+  if (headerLine === -1 || currentLine <= headerLine) {
+    return null;
+  }
+  
+  // Find the Scenario Outline
+  for (let i = examplesLine; i >= 0; i--) {
+    const line = lines[i].trim();
+    if (line.startsWith('Scenario Outline:')) {
+      return { scenarioLine: i + 1 }; // 1-indexed
+    }
+  }
+  
+  return null;
+}
+
 export function activate(context: vscode.ExtensionContext) {
+  
+  // Register CodeLens provider
+  const codeLensProvider = new CucumberCodeLensProvider();
+  const codeLensDisposable = vscode.languages.registerCodeLensProvider(
+    { pattern: '**/*.feature' },
+    codeLensProvider
+  );
+  context.subscriptions.push(codeLensDisposable);
+
   // Command to run the entire feature file
   let runFeatureCommand = vscode.commands.registerCommand('cucumberJavaEasyRunner.runFeature', async (uri: vscode.Uri) => {
     let featureUri = uri;
@@ -26,6 +176,29 @@ export function activate(context: vscode.ExtensionContext) {
     
     runSelectedTest(featureUri);
   });
+
+  // CodeLens command to run the entire feature file
+  let runFeatureCodeLensCommand = vscode.commands.registerCommand('cucumberJavaEasyRunner.runFeatureCodeLens', async (uri: vscode.Uri) => {
+    console.log('runFeatureCodeLensCommand called with URI:', uri.toString());
+    vscode.window.showInformationMessage('Feature test starting...');
+    runSelectedTest(uri);
+  });
+
+  // CodeLens command to run a single scenario
+  let runScenarioCodeLensCommand = vscode.commands.registerCommand('cucumberJavaEasyRunner.runScenarioCodeLens', async (uri: vscode.Uri, lineNumber: number) => {
+    console.log('runScenarioCodeLensCommand called with URI:', uri.toString(), 'line:', lineNumber);
+    vscode.window.showInformationMessage(`Scenario test starting at line ${lineNumber}...`);
+    runSelectedTest(uri, lineNumber);
+  });
+
+  // CodeLens command to run a single example
+  let runExampleCodeLensCommand = vscode.commands.registerCommand('cucumberJavaEasyRunner.runExampleCodeLens', async (uri: vscode.Uri, scenarioLine: number, exampleLine: number) => {
+    console.log('runExampleCodeLensCommand called with URI:', uri.toString(), 'scenario line:', scenarioLine, 'example line:', exampleLine);
+    vscode.window.showInformationMessage(`Example test starting at line ${exampleLine}...`);
+    runSelectedTest(uri, scenarioLine, exampleLine);
+  });
+
+
   
   // Command to run a single scenario
   let runScenarioCommand = vscode.commands.registerCommand('cucumberJavaEasyRunner.runScenario', async () => {
@@ -87,6 +260,9 @@ export function activate(context: vscode.ExtensionContext) {
   });
 
   context.subscriptions.push(runFeatureCommand);
+  context.subscriptions.push(runFeatureCodeLensCommand);
+  context.subscriptions.push(runScenarioCodeLensCommand);
+  context.subscriptions.push(runExampleCodeLensCommand);
   context.subscriptions.push(runScenarioCommand);
   context.subscriptions.push(runExampleCommand);
 }

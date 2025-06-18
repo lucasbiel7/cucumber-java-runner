@@ -2,7 +2,7 @@
   "name": "cucumber-java-easy-runner",
   "displayName": "Cucumber Java Easy Runner",
   "description": "VS Code extension for easily running Cucumber Feature files in Java projects",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "publisher": "HakkiEtem",
   "author": {
     "name": "Hakki Etem"
@@ -31,7 +31,10 @@
     "runner",
     "testing"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onLanguage:gherkin",
+    "workspaceContains:**/*.feature"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
@@ -46,6 +49,18 @@
       {
         "command": "cucumberJavaEasyRunner.runExample",
         "title": "Cucumber: Run Example"
+      },
+      {
+        "command": "cucumberJavaEasyRunner.runFeatureCodeLens",
+        "title": "▶ Run Feature"
+      },
+      {
+        "command": "cucumberJavaEasyRunner.runScenarioCodeLens",
+        "title": "▶ Run Scenario"
+      },
+            {
+        "command": "cucumberJavaEasyRunner.runExampleCodeLens",
+        "title": "▶ Run Example"
       }
     ],
     "menus": {
@@ -73,7 +88,15 @@
           "group": "1_cucumber@3"
         }
       ]
-    }
+    },
+
+    "languages": [
+      {
+        "id": "gherkin",
+        "extensions": [".feature"],
+        "aliases": ["Gherkin", "feature"]
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
