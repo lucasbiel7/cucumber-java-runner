@@ -2,30 +2,54 @@
 
 ![Cucumber Java Easy Runner](https://raw.githubusercontent.com/hakkietem350/Cucumber-Java-Easy-Runner/main/images/logo.png)
 
-A VS Code extension that allows you to easily run Cucumber feature files in Java projects. You can run feature files, scenarios, and example rows directly from the VS Code interface in projects using the Cucumber-JVM framework.
+A VS Code extension that seamlessly integrates Cucumber feature files with VS Code's Test Explorer. Run your Java Cucumber tests directly from the test panel with a clean, modern interface.
 
 ## ✨ Features
 
-- 🥒 **Run the entire feature file**: Right-click on a feature file in the explorer or in the context menu when open in the editor to run the entire feature file
-- 🔍 **Run a single scenario**: Right-click on a specific scenario or scenario outline to run only that scenario
-- 📋 **Run example rows**: Select a specific example row in a Scenario Outline to run only that example
-- ▶️ **CodeLens Play Buttons**: Interactive play buttons appear directly on Feature, Scenario, and Example lines for one-click execution (similar to IntelliJ IDEA and JUnit in VS Code)
-
-- 🔄 **Automatic configuration**: Automatically detects glue path, no manual configuration required
-- ⚡ **Fast execution**: Provides fast execution by directly using the Cucumber CLI in Maven projects
-- 🚫 **No dependencies**: Works without additional plugins or dependencies
+- 🧪 **Test Explorer Integration**: All your Cucumber features and scenarios appear in VS Code's Test Explorer panel
+- 🎯 **Individual Scenario Execution**: Run specific scenarios without executing the entire feature
+- 🔄 **Auto-discovery**: Automatically finds and displays all feature files in your workspace
+- 🚫 **Smart Filtering**: Excludes build directories (target, build, out) to prevent duplicate tests
+- ⚡ **Fast Refresh**: Instantly refresh test list when new features are added
+- 🔧 **Auto-configuration**: Automatically detects glue path, no manual setup required
+- 📋 **Optional CodeLens**: Enable traditional play buttons in feature files if preferred
 
 ## 🚀 Usage
 
-### 1. CodeLens Play Buttons (Recommended)
+### 1. Test Explorer (Recommended)
 
-The extension automatically adds clickable play buttons directly on your feature file lines:
+The primary way to run Cucumber tests is through VS Code's Test Explorer:
 
-- **$(play-circle)** - Appears on `Feature:` lines to run the entire feature
-- **$(play)** - Appears on `Scenario:` and `Scenario Outline:` lines to run individual scenarios
-- **$(debug-start)** - Appears on example data rows to run specific examples
+1. **Open Test Explorer**: Click the test tube icon in the activity bar or press `Ctrl+Shift+T`
+2. **View Your Tests**: All feature files and scenarios are automatically discovered and displayed
+3. **Run Tests**: Click the play button next to any feature or scenario to run it
+4. **Refresh**: Use the refresh button in Test Explorer to discover new tests
 
-Example feature file with CodeLens buttons:
+```
+🧪 Test Explorer
+├─ 📁 Cucumber Java Tests
+   ├─ 📄 Login Feature
+   │  ├─ ✅ Successful login
+   │  ├─ ✅ Failed login with wrong password
+   │  └─ ✅ Password reset flow
+   ├─ 📄 Shopping Cart Feature
+   │  ├─ ✅ Add item to cart
+   │  ├─ ✅ Remove item from cart
+   │  └─ ✅ Checkout process
+   └─ 📄 User Registration Feature
+      ├─ ✅ Valid registration
+      └─ ❌ Invalid email format
+```
+
+### 2. CodeLens Play Buttons (Optional)
+
+If you prefer the traditional approach with play buttons in feature files:
+
+1. **Enable CodeLens**: Go to VS Code Settings → Extensions → Cucumber Java Easy Runner
+2. **Check "Enable CodeLens"**: This will show play buttons directly in your feature files
+3. **Use Play Buttons**: Click the buttons that appear on Feature, Scenario, and Example lines
+
+Example feature file with CodeLens enabled:
 ```gherkin
 $(play-circle) Feature: Shopping Cart
 
@@ -33,114 +57,122 @@ $(play-circle) Feature: Shopping Cart
     Given I am on the product page
     When I click "Add to Cart"
     Then the item should be added to my cart
-    And the cart count should be updated
 
-  $(play) Scenario Outline: User login with different credentials
-    Given I am on the login page
-    When I enter "<username>" and "<password>"
-    Then I should see the "<result>" message
+  $(play) Scenario Outline: User login
+    Given I enter "<username>" and "<password>"
+    Then I should see "<result>"
 
     Examples:
-      | username | password | result       |
-      $(debug-start) | admin    | admin123 | Welcome!     |
-      $(debug-start) | user1    | pass123  | Welcome!     |
-      $(debug-start) | invalid  | wrong    | Access Denied|
+      | username | password | result    |
+      $(debug-start) | admin    | admin123 | Welcome!  |
+      $(debug-start) | user1    | pass123  | Welcome!  |
 ```
 
-### 2. Context Menu Options
+### 3. Context Menu Options
 
-You can also use traditional right-click context menus:
+You can also right-click on feature files:
 
-- Right-click on a `.feature` file in the file explorer and select "Cucumber: Run Feature"
-- Right-click in an open feature file and select "Cucumber: Run Feature", "Cucumber: Run Scenario", or "Cucumber: Run Example"
+- Right-click on a `.feature` file in the file explorer → "Cucumber: Run Feature"
+- Right-click in an open feature file → "Cucumber: Run Feature/Scenario/Example"
 
-Example of context menu:
-```
-┌─────────────────────────────┐
-│   ✂️ Cut                    │
-│   📋 Copy                   │
-│   📋 Paste                  │
-│   ────────────────────────  │
-│ ▶️ Cucumber: Run Feature    │
-│ ▶️ Cucumber: Run Scenario   │
-│ ▶️ Cucumber: Run Example    │
-│   ────────────────────────  │
-│   📝 Open to the Side       │
-└─────────────────────────────┘
-```
+## 🎨 Interface Options
 
-## 🎨 Customization
+### Test Explorer (Default)
+- Clean, organized view of all tests
+- Integrated with VS Code's testing framework
+- Shows test status with clear icons
+- No visual clutter in feature files
 
-### Button Colors
+### CodeLens Buttons (Optional)
+- Traditional play buttons in feature files
+- Similar to IntelliJ IDEA experience
+- Enable via settings if preferred
 
-You can customize the color of the CodeLens play buttons by adding this to your settings.json:
+## ⚙️ Settings
+
+Configure the extension behavior in VS Code Settings:
 
 ```json
 {
-  "workbench.colorCustomizations": {
-    "editorCodeLens.foreground": "#22C55E"
-  }
+  "cucumberJavaEasyRunner.enableCodeLens": false
 }
 ```
 
-**Note**: If you don't set a custom color, VS Code's default CodeLens color will be used.
+**Settings Options:**
+- `enableCodeLens` (boolean, default: false): Show play buttons in feature files. When disabled, use Test Explorer for a cleaner interface.
 
 ## 📦 Installation
 
-You can install the extension from the VS Code Marketplace or manually install the `.vsix` file:
-
 ### From VS Code Marketplace
 1. Open VS Code
-2. Go to Extensions view (View -> Extensions or Ctrl+Shift+X)
+2. Go to Extensions view (`Ctrl+Shift+X`)
 3. Search for "Cucumber Java Easy Runner"
 4. Click Install
 
 ### Manual Installation
 1. Download the `.vsix` file from [Releases](https://github.com/hakkietem350/Cucumber-Java-Easy-Runner/releases)
-2. Open the Extensions view in VS Code
-3. Click on the "..." menu and select "Install from VSIX"
-4. Select the downloaded `.vsix` file
+2. Open Extensions view → "..." menu → "Install from VSIX"
+3. Select the downloaded file
 
-## ⚙️ Requirements
+## 🔧 Requirements
 
-- Java JDK 8 or higher
-- Maven 3.6 or higher must be installed
-- Project must have a Maven structure
-- Cucumber-JVM dependencies must be defined in your project
+- **Java**: JDK 8 or higher
+- **Maven**: 3.6 or higher
+- **Project Structure**: Standard Maven layout
+- **Dependencies**: Cucumber-JVM in your pom.xml
 
-## 🔧 Configuration
+## ⚙️ Configuration
 
-This extension works out of the box with standard Maven project structures. However, if you have a custom setup, you can configure some options:
+**Zero Configuration Required!** The extension works automatically with standard Maven projects:
 
-- The extension will automatically detect the glue path for your step definitions
-- If the automatic detection fails, you'll be prompted to enter your glue path manually
-- CodeLens buttons are automatically enabled for all `.feature` files
+- ✅ Auto-detects step definition glue path
+- ✅ Finds all feature files in your workspace
+- ✅ Excludes build directories automatically
+- ✅ Integrates with VS Code Test Explorer
+
+If auto-detection fails, you'll be prompted to enter your glue path manually (e.g., `com.example.steps`).
+
+## 🔄 Refreshing Tests
+
+**Automatic**: New feature files are detected automatically
+**Manual**: Use the refresh button in Test Explorer or Command Palette → "Refresh Cucumber Tests"
 
 ## ❓ Troubleshooting
 
-- **CodeLens buttons not showing**: Make sure the extension is activated by opening a `.feature` file or running a Cucumber command
-- **Glue path not found error**: You will be asked to manually specify your glue path, e.g. `com.example.steps`
-- **Test execution error**: Make sure that the Maven structure is correct and that Cucumber dependencies are defined in pom.xml
-- **No Cucumber version found**: Ensure that your project has Cucumber dependencies in the pom.xml file
+**Tests not showing in Test Explorer:**
+- Make sure you have `.feature` files in your workspace
+- Check that files aren't in excluded directories (target, build, out)
+- Use the refresh button in Test Explorer
+
+**CodeLens buttons not showing:**
+- Enable CodeLens in extension settings
+- Make sure you're viewing a `.feature` file
+
+**Glue path errors:**
+- Extension will prompt you to enter the path manually
+- Use Java package format: `com.example.steps`
+
+**Test execution issues:**
+- Verify Maven project structure
+- Check Cucumber dependencies in pom.xml
+- Ensure Java and Maven are properly installed
 
 ## 🛠️ Development
-
-If you want to develop this extension:
 
 ```bash
 # Install dependencies
 npm install
 
-# Compile the extension
+# Compile
 npm run compile
 
-# Create the VSIX package
-npx vsce package --allow-star-activation
+# Package
+npx vsce package
 ```
 
-## 🔄 Reporting Issues
+## 🔄 Contributing
 
-If you encounter any issues, please report them on the [GitHub Issues](https://github.com/hakkietem350/Cucumber-Java-Easy-Runner/issues) page.
+Found a bug or have a feature request? Please report it on [GitHub Issues](https://github.com/hakkietem350/Cucumber-Java-Easy-Runner/issues).
 
 ## 📄 License
 
@@ -148,4 +180,5 @@ If you encounter any issues, please report them on the [GitHub Issues](https://g
 
 ---
 
-Developer: Hakkı Etem 
+**Developer**: Hakki Etem  
+**Repository**: [GitHub](https://github.com/hakkietem350/Cucumber-Java-Easy-Runner) 

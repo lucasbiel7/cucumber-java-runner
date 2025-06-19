@@ -2,7 +2,7 @@
   "name": "cucumber-java-easy-runner",
   "displayName": "Cucumber Java Easy Runner",
   "description": "VS Code extension for easily running Cucumber Feature files in Java projects",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "publisher": "HakkiEtem",
   "author": {
     "name": "Hakki Etem"
@@ -61,9 +61,20 @@
             {
         "command": "cucumberJavaEasyRunner.runExampleCodeLens",
         "title": "▶ Run Example"
+      },
+      {
+        "command": "cucumberJavaEasyRunner.refreshTests",
+        "title": "Refresh Cucumber Tests",
+        "icon": "$(refresh)"
       }
     ],
     "menus": {
+      "commandPalette": [
+        {
+          "command": "cucumberJavaEasyRunner.refreshTests",
+          "when": "true"
+        }
+      ],
       "explorer/context": [
         {
           "when": "resourceExtname == .feature",
@@ -96,7 +107,18 @@
         "extensions": [".feature"],
         "aliases": ["Gherkin", "feature"]
       }
-    ]
+    ],
+
+    "configuration": {
+      "title": "Cucumber Java Easy Runner",
+      "properties": {
+        "cucumberJavaEasyRunner.enableCodeLens": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable CodeLens buttons in feature files. When disabled, use Test Explorer instead for a cleaner interface."
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",

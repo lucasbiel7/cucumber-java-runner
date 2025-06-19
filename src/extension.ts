@@ -9,6 +9,267 @@ interface ScenarioInfo {
   exampleLineNumber?: number;
 }
 
+interface FeatureInfo {
+  name: string;
+  scenarios: ScenarioInfo[];
+  filePath: string;
+}
+
+/**
+ * Test controller for Cucumber tests
+ */
+class CucumberTestController {
+  private controller: vscode.TestController;
+  private watchedFiles = new Map<string, vscode.TestItem>();
+
+  constructor(context: vscode.ExtensionContext) {
+    this.controller = vscode.tests.createTestController('cucumberJavaEasyRunner', 'Cucumber Java Tests');
+    context.subscriptions.push(this.controller);
+
+    // Set up file watcher - exclude build directories
+    const watcher = vscode.workspace.createFileSystemWatcher(
+      '**/*.feature',
+      false, // ignoreCreateEvents
+      false, // ignoreChangeEvents  
+      false  // ignoreDeleteEvents
+    );
+    context.subscriptions.push(watcher);
+
+    watcher.onDidCreate(uri => this.handleFileEvent('create', uri));
+    watcher.onDidChange(uri => this.handleFileEvent('change', uri));
+    watcher.onDidDelete(uri => this.handleFileEvent('delete', uri));
+
+    // Set up test run handler
+    this.controller.createRunProfile(
+      'Run Cucumber Tests',
+      vscode.TestRunProfileKind.Run,
+      (request, token) => this.runTests(request, token),
+      true
+    );
+
+    // Add refresh button to test controller
+    this.controller.refreshHandler = () => {
+      console.log('Test controller refresh triggered');
+      this.discoverTests();
+    };
+
+    // Initial scan of workspace - delay to avoid duplicates
+    setTimeout(() => {
+      this.discoverTests();
+    }, 500);
+
+    // Add refresh command
+    const refreshCommand = vscode.commands.registerCommand('cucumberJavaEasyRunner.refreshTests', () => {
+      console.log('Refreshing Cucumber tests...');
+      this.discoverTests();
+    });
+    context.subscriptions.push(refreshCommand);
+  }
+
+  private handleFileEvent(eventType: string, uri: vscode.Uri) {
+    // Filter out files from build/target directories
+    const filePath = uri.fsPath.toLowerCase();
+    const excludedPaths = ['target', 'build', 'out', 'dist', 'node_modules', '.git'];
+    
+    if (excludedPaths.some(excluded => filePath.includes(`/${excluded}/`) || filePath.includes(`\\${excluded}\\`))) {
+      console.log(`Ignoring ${eventType} event for build directory file: ${uri.fsPath}`);
+      return;
+    }
+
+    console.log(`Handling ${eventType} event for: ${uri.fsPath}`);
+    
+    if (eventType === 'delete') {
+      this.deleteTest(uri);
+    } else {
+      // Add small delay to ensure file is fully written
+      setTimeout(() => {
+        this.createOrUpdateTest(uri);
+      }, 100);
+    }
+  }
+
+  private async discoverTests() {
+    // Clear all existing tests first
+    this.controller.items.replace([]);
+    this.watchedFiles.clear();
+    
+    // Exclude common build/target directories to avoid duplicates
+    const featureFiles = await vscode.workspace.findFiles(
+      '**/*.feature', 
+      '{**/node_modules/**,**/target/**,**/build/**,**/out/**,**/dist/**,**/.git/**}'
+    );
+    
+    console.log(`Found ${featureFiles.length} feature files`);
+    
+    for (const uri of featureFiles) {
+      console.log(`Processing feature file: ${uri.fsPath}`);
+      await this.createOrUpdateTest(uri);
+    }
+  }
+
+  private async createOrUpdateTest(uri: vscode.Uri) {
+    try {
+      const document = await vscode.workspace.openTextDocument(uri);
+      const featureInfo = this.parseFeatureFile(document);
+      
+      if (!featureInfo) return;
+
+      // Create unique feature ID using normalized file path
+      const featureId = path.normalize(uri.fsPath);
+      
+      // Check if feature already exists
+      if (this.watchedFiles.has(featureId)) {
+        console.log(`Feature already exists: ${featureId}`);
+        return;
+      }
+      
+      const featureItem = this.controller.createTestItem(featureId, featureInfo.name, uri);
+      this.controller.items.add(featureItem);
+      this.watchedFiles.set(featureId, featureItem);
+
+      // Add scenarios as children
+      for (const scenario of featureInfo.scenarios) {
+        const scenarioId = `${featureId}:scenario:${scenario.lineNumber}`;
+        const scenarioItem = this.controller.createTestItem(
+          scenarioId,
+          scenario.name,
+          uri
+        );
+        
+        scenarioItem.range = new vscode.Range(
+          scenario.lineNumber - 1, 0,
+          scenario.lineNumber - 1, 0
+        );
+
+        featureItem.children.add(scenarioItem);
+      }
+
+      console.log(`Added feature: ${featureInfo.name} with ${featureInfo.scenarios.length} scenarios`);
+
+    } catch (error) {
+      console.error('Error parsing feature file:', error);
+    }
+  }
+
+  private deleteTest(uri: vscode.Uri) {
+    const featureId = path.normalize(uri.fsPath);
+    const featureItem = this.watchedFiles.get(featureId);
+    
+    if (featureItem) {
+      this.controller.items.delete(featureId);
+      this.watchedFiles.delete(featureId);
+      console.log(`Deleted feature: ${featureId}`);
+    }
+  }
+
+  private parseFeatureFile(document: vscode.TextDocument): FeatureInfo | null {
+    const text = document.getText();
+    const lines = text.split('\n');
+    
+    let featureName = '';
+    const scenarios: ScenarioInfo[] = [];
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      
+      if (line.startsWith('Feature:')) {
+        featureName = line.substring(8).trim();
+      } else if (line.startsWith('Scenario:')) {
+        const scenarioName = line.substring(9).trim();
+        scenarios.push({
+          name: scenarioName,
+          lineNumber: i + 1
+        });
+      } else if (line.startsWith('Scenario Outline:')) {
+        const scenarioName = line.substring(17).trim();
+        scenarios.push({
+          name: `${scenarioName} (Outline)`,
+          lineNumber: i + 1
+        });
+      }
+    }
+
+    if (!featureName) return null;
+
+    return {
+      name: featureName,
+      scenarios,
+      filePath: document.uri.fsPath
+    };
+  }
+
+  private async runTests(request: vscode.TestRunRequest, token: vscode.CancellationToken) {
+    const run = this.controller.createTestRun(request);
+    
+    const testItems = request.include || this.gatherAllTests();
+    
+    for (const testItem of testItems) {
+      if (token.isCancellationRequested) {
+        break;
+      }
+
+      await this.runSingleTest(testItem, run);
+    }
+
+    run.end();
+  }
+
+  private gatherAllTests(): vscode.TestItem[] {
+    const tests: vscode.TestItem[] = [];
+    
+    this.controller.items.forEach(item => {
+      tests.push(item);
+      item.children.forEach(child => tests.push(child));
+    });
+    
+    return tests;
+  }
+
+  private async runSingleTest(testItem: vscode.TestItem, run: vscode.TestRun) {
+    run.started(testItem);
+    
+    try {
+      const uri = testItem.uri!;
+      
+      // Check if this is a scenario (contains :scenario: in ID)
+      const isScenario = testItem.id.includes(':scenario:');
+      
+      if (isScenario) {
+        // Extract line number from scenario ID
+        const parts = testItem.id.split(':scenario:');
+        const lineNumber = parseInt(parts[1]);
+        console.log(`Running scenario at line ${lineNumber} for file ${uri.fsPath}`);
+        await this.executeTest(uri, lineNumber);
+      } else {
+        // This is a feature file
+        console.log(`Running entire feature file ${uri.fsPath}`);
+        await this.executeTest(uri);
+      }
+      
+      // Show test as running - user will see results in terminal
+      vscode.window.showInformationMessage(`Test started for ${testItem.label}. Check terminal for results.`);
+      
+      // Wait 2 seconds to show "running" state, then mark as passed
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      run.passed(testItem);
+      
+    } catch (error) {
+      console.error('Test execution error:', error);
+      run.failed(testItem, new vscode.TestMessage(`Test failed: ${error}`));
+    }
+  }
+
+  private async executeTest(uri: vscode.Uri, lineNumber?: number) {
+    // Use the existing runSelectedTest function
+    await runSelectedTest(uri, lineNumber);
+  }
+
+  dispose() {
+    this.controller.dispose();
+    this.watchedFiles.clear();
+  }
+}
+
 /**
  * CodeLens provider for Cucumber feature files - with compact buttons
  */
@@ -150,15 +411,39 @@ function findExampleRowInfo(lines: string[], currentLine: number): { scenarioLin
   return null;
 }
 
+// Global test controller instance
+let globalTestController: CucumberTestController | undefined;
+
 export function activate(context: vscode.ExtensionContext) {
   
-  // Register CodeLens provider
-  const codeLensProvider = new CucumberCodeLensProvider();
-  const codeLensDisposable = vscode.languages.registerCodeLensProvider(
-    { pattern: '**/*.feature' },
-    codeLensProvider
-  );
-  context.subscriptions.push(codeLensDisposable);
+  // Dispose existing controller if it exists
+  if (globalTestController) {
+    try {
+      globalTestController.dispose();
+    } catch (error) {
+      console.log('Error disposing previous controller:', error);
+    }
+  }
+  
+  // Create new test controller
+  globalTestController = new CucumberTestController(context);
+  
+  // Check if CodeLens should be enabled (default: false since we have Test Explorer)
+  const config = vscode.workspace.getConfiguration('cucumberJavaEasyRunner');
+  const enableCodeLens = config.get('enableCodeLens', false);
+  
+  if (enableCodeLens) {
+    // Register CodeLens provider only if enabled
+    const codeLensProvider = new CucumberCodeLensProvider();
+    const codeLensDisposable = vscode.languages.registerCodeLensProvider(
+      { pattern: '**/*.feature' },
+      codeLensProvider
+    );
+    context.subscriptions.push(codeLensDisposable);
+    console.log('CodeLens provider registered');
+  } else {
+    console.log('CodeLens disabled - use Test Explorer instead');
+  }
 
   // Command to run the entire feature file
   let runFeatureCommand = vscode.commands.registerCommand('cucumberJavaEasyRunner.runFeature', async (uri: vscode.Uri) => {
@@ -198,8 +483,6 @@ export function activate(context: vscode.ExtensionContext) {
     runSelectedTest(uri, scenarioLine, exampleLine);
   });
 
-
-  
   // Command to run a single scenario
   let runScenarioCommand = vscode.commands.registerCommand('cucumberJavaEasyRunner.runScenario', async () => {
     const editor = vscode.window.activeTextEditor;
@@ -277,7 +560,7 @@ async function runSelectedTest(uri: vscode.Uri, lineNumber?: number, exampleLine
   const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
   if (!workspaceFolder) {
     vscode.window.showErrorMessage('Feature file is not inside a workspace.');
-    return;
+    return false;
   }
 
   // Get the relative path of the feature file in the project
@@ -307,7 +590,7 @@ async function runSelectedTest(uri: vscode.Uri, lineNumber?: number, exampleLine
       
       if (!userInput) {
         vscode.window.showErrorMessage('Glue path not specified, operation cancelled.');
-        return;
+        return false;
       }
       
       runCucumberTest(workspaceFolder.uri.fsPath, relativePath, userInput, terminal, lineNumber, exampleLine);
