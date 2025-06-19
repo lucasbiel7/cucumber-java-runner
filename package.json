@@ -2,14 +2,14 @@
   "name": "cucumber-java-easy-runner",
   "displayName": "Cucumber Java Easy Runner",
   "description": "VS Code extension for easily running Cucumber Feature files in Java projects",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "publisher": "HakkiEtem",
   "author": {
     "name": "Hakki Etem"
   },
   "icon": "images/logo.png",
   "engines": {
-    "vscode": "^1.96.0"
+    "vscode": "^1.93.1"
   },
   "repository": {
     "type": "git",
@@ -129,7 +129,7 @@
     "test": "node ./out/test/runTest.js"
   },
   "devDependencies": {
-    "@types/vscode": "^1.96.0",
+    "@types/vscode": "^1.93.1",
     "@types/glob": "^8.1.0",
     "@types/mocha": "^10.0.1",
     "@types/node": "16.x",
