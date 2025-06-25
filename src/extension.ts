@@ -7,12 +7,19 @@ interface ScenarioInfo {
   name: string;
   lineNumber: number;
   exampleLineNumber?: number;
+  examples?: ExampleInfo[];
+}
+
+interface ExampleInfo {
+  lineNumber: number;
+  data: string;
 }
 
 interface FeatureInfo {
   name: string;
   scenarios: ScenarioInfo[];
   filePath: string;
+  lineNumber: number;
 }
 
 /**
@@ -124,6 +131,13 @@ class CucumberTestController {
       }
       
       const featureItem = this.controller.createTestItem(featureId, featureInfo.name, uri);
+      
+      // Set range for feature to show play button in gutter
+      featureItem.range = new vscode.Range(
+        featureInfo.lineNumber - 1, 0,
+        featureInfo.lineNumber - 1, 0
+      );
+      
       this.controller.items.add(featureItem);
       this.watchedFiles.set(featureId, featureItem);
 
@@ -142,6 +156,25 @@ class CucumberTestController {
         );
 
         featureItem.children.add(scenarioItem);
+        
+        // Add example rows as children of scenario
+        if (scenario.examples && scenario.examples.length > 0) {
+          for (const example of scenario.examples) {
+            const exampleId = `${scenarioId}:example:${example.lineNumber}`;
+            const exampleItem = this.controller.createTestItem(
+              exampleId,
+              `Example: ${example.data.trim()}`,
+              uri
+            );
+            
+            exampleItem.range = new vscode.Range(
+              example.lineNumber - 1, 0,
+              example.lineNumber - 1, 0
+            );
+            
+            scenarioItem.children.add(exampleItem);
+          }
+        }
       }
 
       console.log(`Added feature: ${featureInfo.name} with ${featureInfo.scenarios.length} scenarios`);
@@ -167,25 +200,41 @@ class CucumberTestController {
     const lines = text.split('\n');
     
     let featureName = '';
+    let featureLineNumber = 0;
     const scenarios: ScenarioInfo[] = [];
+    let currentScenario: ScenarioInfo | null = null;
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
       
       if (line.startsWith('Feature:')) {
         featureName = line.substring(8).trim();
+        featureLineNumber = i + 1;
       } else if (line.startsWith('Scenario:')) {
         const scenarioName = line.substring(9).trim();
-        scenarios.push({
+        currentScenario = {
           name: scenarioName,
-          lineNumber: i + 1
-        });
+          lineNumber: i + 1,
+          examples: []
+        };
+        scenarios.push(currentScenario);
       } else if (line.startsWith('Scenario Outline:')) {
         const scenarioName = line.substring(17).trim();
-        scenarios.push({
+        currentScenario = {
           name: `${scenarioName} (Outline)`,
-          lineNumber: i + 1
-        });
+          lineNumber: i + 1,
+          examples: []
+        };
+        scenarios.push(currentScenario);
+              } else if (line.startsWith('|') && currentScenario && i > 0) {
+        // Check if this is an example row (not header)
+        const exampleInfo = findExampleRowInfo(lines, i);
+        if (exampleInfo && currentScenario.examples) {
+          currentScenario.examples.push({
+            lineNumber: i + 1,
+            data: line
+          });
+        }
       }
     }
 
@@ -194,7 +243,8 @@ class CucumberTestController {
     return {
       name: featureName,
       scenarios,
-      filePath: document.uri.fsPath
+      filePath: document.uri.fsPath,
+      lineNumber: featureLineNumber
     };
   }
 
@@ -231,11 +281,16 @@ class CucumberTestController {
     try {
       const uri = testItem.uri!;
       
-      // Check if this is a scenario (contains :scenario: in ID)
-      const isScenario = testItem.id.includes(':scenario:');
-      
-      if (isScenario) {
-        // Extract line number from scenario ID
+      // Check test type based on ID structure
+      if (testItem.id.includes(':example:')) {
+        // This is an example row
+        const parts = testItem.id.split(':');
+        const scenarioLine = parseInt(parts[2]); // scenario line number
+        const exampleLine = parseInt(parts[4]); // example line number
+        console.log(`Running example at scenario line ${scenarioLine}, example line ${exampleLine} for file ${uri.fsPath}`);
+        await this.executeTest(uri, scenarioLine, exampleLine);
+      } else if (testItem.id.includes(':scenario:')) {
+        // This is a scenario
         const parts = testItem.id.split(':scenario:');
         const lineNumber = parseInt(parts[1]);
         console.log(`Running scenario at line ${lineNumber} for file ${uri.fsPath}`);
@@ -259,9 +314,9 @@ class CucumberTestController {
     }
   }
 
-  private async executeTest(uri: vscode.Uri, lineNumber?: number) {
+  private async executeTest(uri: vscode.Uri, lineNumber?: number, exampleLine?: number) {
     // Use the existing runSelectedTest function
-    await runSelectedTest(uri, lineNumber);
+    await runSelectedTest(uri, lineNumber, exampleLine);
   }
 
   dispose() {
@@ -311,7 +366,7 @@ class CucumberCodeLensProvider implements vscode.CodeLensProvider {
         if (exampleInfo) {
           const range = new vscode.Range(i, 0, i, 0);
           codeLenses.push(new vscode.CodeLens(range, {
-            title: '$(debug-start) ',
+            title: '$(play) ',
             tooltip: 'Click to run this example row',
             command: 'cucumberJavaEasyRunner.runExampleCodeLens',
             arguments: [document.uri, exampleInfo.scenarioLine, i + 1] // scenario line and example line
