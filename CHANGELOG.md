@@ -2,6 +2,30 @@
 
 All notable changes to the Cucumber Java Runner extension will be documented in this file.
 
+## [1.0.5] - 2025-10-04
+
+### ✨ Features & Improvements
+
+#### Test Result Processing Enhancements
+- **Improved Error Reporting**: Created dedicated `resultProcessor.ts` module for better code organization and maintainability
+- **Detailed Error Messages**: Test failures now show the exact step that failed with complete error details
+- **Accurate Error Location**: Error markers now appear on the exact line of the failed step, not at the scenario start
+- **Multiple Failure Support**: When multiple scenarios fail, each one shows its specific error with correct location
+- **Precise Line Matching**: Fixed bug where scenarios on lines like 5 and 57 could be confused due to substring matching
+
+#### Technical Improvements
+- Refactored test result processing logic into separate module for better separation of concerns
+- Enhanced scenario-to-test-item matching with exact line number comparison
+- Added comprehensive debug logging for troubleshooting test execution
+- Improved error message formatting with cleaner step name and error display
+
+### 🐛 Bug Fixes
+- Fixed issue where wrong scenarios were marked as failed due to imprecise line number matching
+- Fixed duplicate error marking when running features with child scenarios
+- Ensured detailed error messages appear for both direct test runs and child scenario runs
+
+---
+
 ## [1.0.4] - 2025-10-04
 
 ### 🐛 Bug Fixes

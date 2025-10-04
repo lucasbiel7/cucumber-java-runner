@@ -236,8 +236,8 @@ export class CucumberTestController {
       // If this is a feature file with children (scenarios), mark each child individually
       const hasChildren = !lineNumber && testItem.children.size > 0 && result.resultFile;
 
-      if (hasChildren) {
-        markChildrenFromResults(testItem, run, result.resultFile!);
+      if (hasChildren && result.resultFile) {
+        markChildrenFromResults(testItem, run, result.resultFile);
         // When children are marked individually, just mark parent based on overall result
         if (result.passed) {
           run.passed(testItem);

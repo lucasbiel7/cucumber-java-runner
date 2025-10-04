@@ -16,20 +16,24 @@ This is an enhanced version of the original [Cucumber Java Easy Runner](https://
 
 - **✅ Real Test Results**: Tests are now marked as passed ✅ or failed ❌ based on actual Cucumber execution results (not just "always passed")
 - **📊 Individual Scenario Results**: When running entire features, each scenario is marked individually with its real result
+- **📍 Precise Error Location**: Error markers appear on the exact line of the failed step, making debugging instant
+- **🎯 Detailed Error Messages**: See the exact step that failed with complete stack trace and error details
+- **🔍 Multiple Failure Support**: When multiple scenarios fail, each shows its specific error at the correct location
 - **⚡ Optimized Maven Compilation**: Only compiles when `target` folder doesn't exist (much faster execution)
 - **🐛 Debug & Run Modes**: Both modes now use the same unified approach with proper result tracking
 - **📝 JSON Result Analysis**: Uses Cucumber's JSON output to determine pass/fail status with detailed error messages
-- **🧹 Code Refactoring**: Consolidated duplicate code (merged `testRunner` and `debugRunner` into single `cucumberRunner`)
-- **🎯 Better Error Messages**: Shows which step failed and why
+- **🧹 Code Refactoring**: Consolidated duplicate code and extracted result processing into dedicated module
 - **🔧 Cleaner Architecture**: Simplified codebase with better separation of concerns
 
 ### 🔍 Technical Improvements
 
 1. **Unified Test Execution**: Single `runCucumberTest()` function handles both run and debug modes
 2. **Result File Analysis**: Uses `--plugin json:${resultFile}` to capture detailed test results
-3. **Smart Compilation**: Maven compilation only runs when needed (checks for `target` directory)
-4. **Consolidated Methods**: Merged duplicate methods (`runTests`/`debugTests`, `runSingleTest`/`debugSingleTest`)
-5. **DRY Principles**: Eliminated code repetition throughout the codebase
+3. **Dedicated Result Processor**: New `resultProcessor.ts` module handles all test result parsing and marking
+4. **Precise Line Matching**: Exact numeric comparison prevents false positives (e.g., line 5 vs line 57)
+5. **Smart Compilation**: Maven compilation only runs when needed (checks for `target` directory)
+6. **Consolidated Methods**: Merged duplicate methods (`runTests`/`debugTests`, `runSingleTest`/`debugSingleTest`)
+7. **DRY Principles**: Eliminated code repetition throughout the codebase
 
 ## 🎯 Features
 

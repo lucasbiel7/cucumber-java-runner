@@ -61,7 +61,6 @@ function parseResultFile(resultFile: string): ScenarioResult[] {
                   errorMessage: step.result?.error_message || 'Unknown error',
                   line: step.line
                 };
-                console.log(`[parseResultFile] Found failed step in scenario "${scenarioName}" (line ${scenarioLine}): ${step.name} at line ${step.line}`);
                 break;
               }
             }
@@ -96,23 +95,13 @@ export function markChildrenFromResults(
 ): void {
   try {
     const scenarioResults = parseResultFile(resultFile);
-    console.log(`Processing ${scenarioResults.length} scenario results`);
 
     // Find the corresponding test items and mark them
-    console.log(`Feature has ${featureItem.children.size} children`);
-    featureItem.children.forEach(child => {
-      console.log(`  Child: "${child.label}" - ID: ${child.id}`);
-    });
-
     for (const scenarioResult of scenarioResults) {
-      console.log(`\n[markChildren] Processing scenario "${scenarioResult.name}" at line ${scenarioResult.line}: passed=${scenarioResult.passed}`);
-
-      let matched = false;
       featureItem.children.forEach(child => {
         // Check if this child matches the scenario line - must be exact match
         // The ID format is: path:scenario:LINE or path:scenario:LINE:example:EXAMPLELINE
         // We need to ensure we match exactly ":scenario:5" and not ":scenario:57"
-        const scenarioIdPattern = `:scenario:${scenarioResult.line}`;
         const childIdParts = child.id.split(':scenario:');
         if (childIdParts.length > 1) {
           // Extract the line number part after :scenario:
@@ -120,11 +109,7 @@ export function markChildrenFromResults(
           const childScenarioLine = parseInt(lineNumberPart, 10);
 
           if (childScenarioLine === scenarioResult.line) {
-            matched = true;
-            console.log(`  ✓ Matched with child: "${child.label}" (${child.id})`);
-
             if (scenarioResult.passed) {
-              console.log(`  → Marking as PASSED`);
               run.passed(child);
             } else if (scenarioResult.failedStep) {
               const message = new vscode.TestMessage(
@@ -137,20 +122,13 @@ export function markChildrenFromResults(
                   new vscode.Position(scenarioResult.failedStep.line - 1, 0)
                 );
               }
-              console.log(`  → Marking as FAILED with message at step line ${scenarioResult.failedStep.line}`);
-              console.log(`     Step: ${scenarioResult.failedStep.name}`);
               run.failed(child, message);
             } else {
-              console.log(`  → Marking as FAILED (no failed step info)`);
               run.failed(child, new vscode.TestMessage('Scenario failed'));
             }
           }
         }
       });
-
-      if (!matched) {
-        console.warn(`  ✗ No child matched for scenario "${scenarioResult.name}" at line ${scenarioResult.line}`);
-      }
     }
   } catch (error) {
     console.error('Error marking children from results:', error);
