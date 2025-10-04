@@ -13,8 +13,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/lucasbiel7/cucumber-java-runner"
+    "url": "https://github.com/lucasbiel7/cucumber-java-runner.git"
   },
+  "bugs": {
+    "url": "https://github.com/lucasbiel7/cucumber-java-runner/issues"
+  },
+  "homepage": "https://github.com/lucasbiel7/cucumber-java-runner#readme",
   "categories": [
     "Testing",
     "Debuggers",

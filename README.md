@@ -1,11 +1,45 @@
 # Cucumber Java Runner
 
-A VS Code extension that seamlessly integrates Cucumber feature files with VS Code's Test Explorer. Run your Java Cucumber tests directly from the test panel with a clean, modern interface.
+A powerful VS Code extension that seamlessly integrates Cucumber feature files with VS Code's Test Explorer. Run and debug your Java Cucumber tests directly from the test panel with a clean, modern interface.
 
-## ✨ Features
+[![CI](https://github.com/lucasbiel7/cucumber-java-runner/actions/workflows/ci.yml/badge.svg)](https://github.com/lucasbiel7/cucumber-java-runner/actions/workflows/ci.yml)
+[![Publish](https://github.com/lucasbiel7/cucumber-java-runner/actions/workflows/publish.yml/badge.svg)](https://github.com/lucasbiel7/cucumber-java-runner/actions/workflows/publish.yml)
+[![Version](https://img.shields.io/visual-studio-marketplace/v/lucasbiel7.cucumber-java-runner)](https://marketplace.visualstudio.com/items?itemName=lucasbiel7.cucumber-java-runner)
+[![Downloads](https://img.shields.io/visual-studio-marketplace/d/lucasbiel7.cucumber-java-runner)](https://marketplace.visualstudio.com/items?itemName=lucasbiel7.cucumber-java-runner)
+[![License](https://img.shields.io/github/license/lucasbiel7/cucumber-java-runner)](https://github.com/lucasbiel7/cucumber-java-runner/blob/main/LICENSE)
+
+## ✨ What's New in This Fork
+
+This is an enhanced version of the original [Cucumber Java Easy Runner](https://github.com/hakkietem350/Cucumber-Java-Easy-Runner) with significant improvements:
+
+### 🚀 Major Enhancements
+
+- **✅ Real Test Results**: Tests are now marked as passed ✅ or failed ❌ based on actual Cucumber execution results (not just "always passed")
+- **📊 Individual Scenario Results**: When running entire features, each scenario is marked individually with its real result
+- **⚡ Optimized Maven Compilation**: Only compiles when `target` folder doesn't exist (much faster execution)
+- **🐛 Debug & Run Modes**: Both modes now use the same unified approach with proper result tracking
+- **📝 JSON Result Analysis**: Uses Cucumber's JSON output to determine pass/fail status with detailed error messages
+- **🧹 Code Refactoring**: Consolidated duplicate code (merged `testRunner` and `debugRunner` into single `cucumberRunner`)
+- **🎯 Better Error Messages**: Shows which step failed and why
+- **🔧 Cleaner Architecture**: Simplified codebase with better separation of concerns
+
+### 🔍 Technical Improvements
+
+1. **Unified Test Execution**: Single `runCucumberTest()` function handles both run and debug modes
+2. **Result File Analysis**: Uses `--plugin json:${resultFile}` to capture detailed test results
+3. **Smart Compilation**: Maven compilation only runs when needed (checks for `target` directory)
+4. **Consolidated Methods**: Merged duplicate methods (`runTests`/`debugTests`, `runSingleTest`/`debugSingleTest`)
+5. **DRY Principles**: Eliminated code repetition throughout the codebase
+
+## 🎯 Features
+
+### Core Functionality
 
 - 🧪 **Test Explorer Integration**: All your Cucumber features and scenarios appear in VS Code's Test Explorer panel
+- ✅ **Real Pass/Fail Status**: Tests show actual results from Cucumber execution
 - 🎯 **Individual Scenario Execution**: Run specific scenarios without executing the entire feature
+- 🐛 **Full Debug Support**: Debug your step definitions with breakpoints
+- 📊 **Detailed Results**: See which scenarios passed and which failed, with error details
 - 🔄 **Auto-discovery**: Automatically finds and displays all feature files in your workspace
 - 🚫 **Smart Filtering**: Excludes build directories (target, build, out) to prevent duplicate tests
 - ⚡ **Fast Refresh**: Instantly refresh test list when new features are added
@@ -21,64 +55,85 @@ The primary way to run Cucumber tests is through VS Code's Test Explorer:
 1. **Open Test Explorer**: Click the test tube icon in the activity bar or press `Ctrl+Shift+T`
 2. **View Your Tests**: All feature files and scenarios are automatically discovered and displayed
 3. **Run Tests**: Click the play button next to any feature or scenario to run it
-4. **Refresh**: Use the refresh button in Test Explorer to discover new tests
+4. **Debug Tests**: Right-click and select "Debug Test" to debug with breakpoints
+5. **View Results**: Tests are marked with ✅ (passed) or ❌ (failed) based on actual execution
 
 ```
 🧪 Test Explorer
 ├─ 📁 Cucumber Java Tests
    ├─ 📄 Login Feature
    │  ├─ ✅ Successful login
-   │  ├─ ✅ Failed login with wrong password
+   │  ├─ ❌ Failed login with wrong password  ← Shows real failure!
    │  └─ ✅ Password reset flow
    ├─ 📄 Shopping Cart Feature
    │  ├─ ✅ Add item to cart
    │  ├─ ✅ Remove item from cart
-   │  └─ ✅ Checkout process
+   │  └─ ❌ Checkout process  ← Shows which scenario actually failed!
    └─ 📄 User Registration Feature
       ├─ ✅ Valid registration
-      └─ ❌ Invalid email format
+      └─ ❌ Invalid email format  ← Click to see error details
 ```
 
-### 2. CodeLens Play Buttons (Optional)
+### 2. Running Multiple Scenarios
+
+When you run an entire feature file:
+- Each scenario is executed
+- Each scenario is marked individually with its own pass/fail status
+- You can see at a glance which scenarios passed and which failed
+- Click on failed scenarios to see error details
+
+### 3. Debugging
+
+- Right-click any test → "Debug Test"
+- Set breakpoints in your step definitions
+- Step through your code with full debugging support
+- Even in debug mode, tests are marked with correct pass/fail status after execution
+
+### 4. CodeLens Play Buttons (Optional)
 
 If you prefer the traditional approach with play buttons in feature files:
 
-1. **Enable CodeLens**: Go to VS Code Settings → Extensions → Cucumber Java Easy Runner
+1. **Enable CodeLens**: Go to VS Code Settings → Extensions → Cucumber Java Runner
 2. **Check "Enable CodeLens"**: This will show play buttons directly in your feature files
 3. **Use Play Buttons**: Click the buttons that appear on Feature, Scenario, and Example lines
 
 Example feature file with CodeLens enabled:
 ```gherkin
-$(play-circle) Feature: Shopping Cart
+▶ Run Feature | 🐛 Debug Feature
+Feature: Shopping Cart
 
-  $(play) Scenario: Adding an item to cart
+  ▶ Run Scenario | 🐛 Debug Scenario
+  Scenario: Adding an item to cart
     Given I am on the product page
     When I click "Add to Cart"
     Then the item should be added to my cart
 
-  $(play) Scenario Outline: User login
+  ▶ Run Scenario | 🐛 Debug Scenario
+  Scenario Outline: User login
     Given I enter "<username>" and "<password>"
     Then I should see "<result>"
 
     Examples:
       | username | password | result    |
-      $(debug-start) | admin    | admin123 | Welcome!  |
-      $(debug-start) | user1    | pass123  | Welcome!  |
+      | admin    | admin123 | Welcome!  |
+      | user1    | pass123  | Welcome!  |
 ```
 
-### 3. Context Menu Options
+### 5. Context Menu Options
 
 You can also right-click on feature files:
 
 - Right-click on a `.feature` file in the file explorer → "Cucumber: Run Feature"
 - Right-click in an open feature file → "Cucumber: Run Feature/Scenario/Example"
+- Right-click in an open feature file → "Cucumber: Debug Feature/Scenario/Example"
 
 ## 🎨 Interface Options
 
-### Test Explorer (Default)
+### Test Explorer (Default) - Recommended
 - Clean, organized view of all tests
 - Integrated with VS Code's testing framework
-- Shows test status with clear icons
+- Shows real test status with ✅/❌ icons
+- Detailed error messages on failures
 - No visual clutter in feature files
 
 ### CodeLens Buttons (Optional)
@@ -92,7 +147,7 @@ Configure the extension behavior in VS Code Settings:
 
 ```json
 {
-  "cucumberJavaEasyRunner.enableCodeLens": false
+  "cucumberJavaRunner.enableCodeLens": false
 }
 ```
 
@@ -102,13 +157,13 @@ Configure the extension behavior in VS Code Settings:
 ## 📦 Installation
 
 ### From VS Code Marketplace
-1. Open VS Code
+1. Open VS Code or Cursor
 2. Go to Extensions view (`Ctrl+Shift+X`)
-3. Search for "Cucumber Java Easy Runner"
+3. Search for "Cucumber Java Runner"
 4. Click Install
 
 ### Manual Installation
-1. Download the `.vsix` file from [Releases](https://github.com/hakkietem350/Cucumber-Java-Easy-Runner/releases)
+1. Download the `.vsix` file from [Releases](https://github.com/lucasbiel7/cucumber-java-runner/releases)
 2. Open Extensions view → "..." menu → "Install from VSIX"
 3. Select the downloaded file
 
@@ -118,6 +173,7 @@ Configure the extension behavior in VS Code Settings:
 - **Maven**: 3.6 or higher
 - **Project Structure**: Standard Maven layout
 - **Dependencies**: Cucumber-JVM in your pom.xml
+- **VS Code Extension**: Java Extension Pack (for debugging support)
 
 ## ⚙️ Configuration
 
@@ -127,6 +183,7 @@ Configure the extension behavior in VS Code Settings:
 - ✅ Finds all feature files in your workspace
 - ✅ Excludes build directories automatically
 - ✅ Integrates with VS Code Test Explorer
+- ✅ Optimized Maven compilation (only when needed)
 
 If auto-detection fails, you'll be prompted to enter your glue path manually (e.g., `com.example.steps`).
 
@@ -135,25 +192,46 @@ If auto-detection fails, you'll be prompted to enter your glue path manually (e.
 **Automatic**: New feature files are detected automatically
 **Manual**: Use the refresh button in Test Explorer or Command Palette → "Refresh Cucumber Tests"
 
+## 💡 How It Works
+
+1. **Test Discovery**: Scans workspace for `.feature` files
+2. **Auto-compilation**: Compiles Maven project only if `target` folder doesn't exist
+3. **Test Execution**: Runs Cucumber with `--plugin json:${resultFile}` to capture results
+4. **Result Analysis**: Reads JSON output to determine pass/fail status for each scenario
+5. **UI Update**: Updates Test Explorer with ✅ (passed) or ❌ (failed) icons
+6. **Cleanup**: Removes temporary JSON result files
+
 ## ❓ Troubleshooting
 
 **Tests not showing in Test Explorer:**
 - Make sure you have `.feature` files in your workspace
 - Check that files aren't in excluded directories (target, build, out)
 - Use the refresh button in Test Explorer
+- Check VS Code Output panel → "Cucumber Java Runner" for logs
 
 **CodeLens buttons not showing:**
 - Enable CodeLens in extension settings
 - Make sure you're viewing a `.feature` file
+- Reload VS Code window
 
 **Glue path errors:**
 - Extension will prompt you to enter the path manually
 - Use Java package format: `com.example.steps`
+- Check your step definitions are in the correct package
 
 **Test execution issues:**
-- Verify Maven project structure
+- Verify Maven project structure (standard layout)
 - Check Cucumber dependencies in pom.xml
-- Ensure Java and Maven are properly installed
+- Ensure Java and Maven are in your PATH
+- Check terminal output for detailed error messages
+
+**Tests always showing as passed (old versions):**
+- Update to latest version! This fork fixes that issue.
+- Make sure you're using version 1.0.0 or higher
+
+**Compilation is slow:**
+- This fork optimizes compilation! Only runs when `target` folder doesn't exist
+- Delete `target` folder to force recompilation when needed
 
 ## 🛠️ Development
 
@@ -161,16 +239,55 @@ If auto-detection fails, you'll be prompted to enter your glue path manually (e.
 # Install dependencies
 npm install
 
-# Compile
+# Compile TypeScript
 npm run compile
 
-# Package
+# Watch mode (auto-compile on changes)
+npm run watch
+
+# Package extension
 npx vsce package
+
+# Install locally for testing
+code --install-extension cucumber-java-runner-1.0.0.vsix
+# or
+cursor --install-extension cucumber-java-runner-1.0.0.vsix
 ```
+
+## 📊 Comparison: Original vs This Fork
+
+| Feature | Original | This Fork |
+|---------|----------|-----------|
+| Test Results | Always "passed" ⚠️ | Real pass/fail status ✅ |
+| Individual Scenario Results | No ❌ | Yes ✅ |
+| Maven Compilation | Always runs 🐌 | Smart/optimized ⚡ |
+| Code Duplication | High 📚 | Low (refactored) 🎯 |
+| Debug Mode Results | No tracking ❌ | Full tracking ✅ |
+| Error Messages | Generic ⚠️ | Detailed with step info 📝 |
+| Architecture | Separate runners 🔀 | Unified runner 🎯 |
 
 ## 🔄 Contributing
 
-Found a bug or have a feature request? Please report it on [GitHub Issues](https://github.com/hakkietem350/Cucumber-Java-Easy-Runner/issues).
+Found a bug or have a feature request? Please report it on [GitHub Issues](https://github.com/lucasbiel7/cucumber-java-runner/issues).
+
+Pull requests are welcome! For major changes, please open an issue first to discuss what you would like to change.
+
+## 📝 Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
+
+## 🙏 Credits
+
+This project is a fork of [Cucumber Java Easy Runner](https://github.com/hakkietem350/Cucumber-Java-Easy-Runner) by Hakki Etem.
+
+**Enhanced and maintained by**: Lucas Biel ([@lucasbiel7](https://github.com/lucasbiel7))
+
+Major improvements include:
+- Real test result tracking
+- Individual scenario result marking
+- Optimized Maven compilation
+- Code refactoring and consolidation
+- Better error messages and debugging support
 
 ## 📄 License
 
@@ -178,5 +295,6 @@ Found a bug or have a feature request? Please report it on [GitHub Issues](https
 
 ---
 
-**Developer**: Hakki Etem
-**Repository**: [GitHub](https://github.com/hakkietem350/Cucumber-Java-Easy-Runner)
+**Enjoy testing with Cucumber! 🥒✨**
+
+If you find this extension helpful, please ⭐ star the [repository](https://github.com/lucasbiel7/cucumber-java-runner) and leave a review on the [marketplace](https://marketplace.visualstudio.com/items?itemName=lucasbiel7.cucumber-java-runner)!
