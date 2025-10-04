@@ -2,7 +2,7 @@
   "name": "cucumber-java-runner",
   "displayName": "Cucumber Java Runner",
   "description": "VS Code extension for running Cucumber Feature files in Java projects",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "publisher": "lucasbiel7",
   "author": {
     "name": "lucasbiel7"
