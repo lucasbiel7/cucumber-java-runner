@@ -2,6 +2,38 @@
 
 All notable changes to the Cucumber Java Runner extension will be documented in this file.
 
+## [1.0.6] - 2025-10-04
+
+### ✨ Features & Improvements
+- **Implemented `autoCompileMaven` configuration**: Now you can disable automatic Maven compilation by setting `cucumberJavaRunner.autoCompileMaven` to `false`
+  - When enabled (default), compiles Maven project automatically when `target/` directory is missing
+  - When disabled, skips automatic compilation entirely
+- **Implemented `excludeBuildDirectories` configuration**: Customize which directories to exclude when discovering feature files
+  - Default: `["target", "build", "out", "dist", "node_modules", ".git"]`
+  - Users can now add custom directories to exclude (e.g., `"generated"`, `"bin"`)
+- **Added `additionalGluePaths` configuration**: Support for external step definitions from libraries
+  - Useful when using step definitions from external JAR files or shared modules
+  - Accepts array of Java package paths (e.g., `["com.external.library.steps"]`)
+
+### 🗑️ Removed
+- **BREAKING**: Removed `showDetailedErrors` configuration
+  - Detailed errors are always shown - this is the expected behavior
+  - Configuration was documented but never actually implemented
+  - No action needed from users (feature works as before)
+
+### 📝 Documentation
+- Updated configuration documentation in README.md with all available settings
+- Added comprehensive examples for each configuration option
+- All configuration names now include full prefix `cucumberJavaRunner.` for easier search
+- Created `.cursor/commands/verify-and-document-configs.md` guide for maintaining configuration documentation
+
+### 🔧 Technical Improvements
+- All configurations are now properly implemented and functional
+- Configuration values are read from VS Code settings with proper defaults
+- Improved code organization with configuration checks in appropriate modules
+
+---
+
 ## [1.0.5] - 2025-10-04
 
 ### ✨ Features & Improvements
@@ -16,10 +48,6 @@ All notable changes to the Cucumber Java Runner extension will be documented in 
 #### Enhanced Configuration
 - **Expanded Settings Panel**: Added comprehensive configuration options in VS Code Settings
 - **Better Documentation**: All settings now have detailed descriptions and examples
-- **New Configuration Options**:
-  - `showDetailedErrors`: Toggle detailed error messages (default: true)
-  - `autoCompileMaven`: Control automatic Maven compilation (default: true)
-  - `excludeBuildDirectories`: Customize which directories to exclude when discovering tests
 - **Improved Settings UI**: Settings are now properly ordered and documented with markdown support
 
 #### Technical Improvements

@@ -93,10 +93,25 @@ export class CucumberTestController {
     this.controller.items.replace([]);
     this.watchedFiles.clear();
 
-    // Exclude common build/target directories to avoid duplicates
+    // Get excluded directories from configuration
+    const config = vscode.workspace.getConfiguration('cucumberJavaRunner');
+    const excludeDirs = config.get<string[]>('excludeBuildDirectories', [
+      'target',
+      'build',
+      'out',
+      'dist',
+      'node_modules',
+      '.git'
+    ]);
+
+    // Build the exclude pattern from the configuration
+    const excludePattern = '{' + excludeDirs.map(dir => `**/${dir}/**`).join(',') + '}';
+    console.log(`Excluding directories: ${excludePattern}`);
+
+    // Find all feature files excluding the configured directories
     const featureFiles = await vscode.workspace.findFiles(
       '**/*.feature',
-      '{**/node_modules/**,**/target/**,**/build/**,**/out/**,**/dist/**,**/.git/**}'
+      excludePattern
     );
 
     console.log(`Found ${featureFiles.length} feature files`);

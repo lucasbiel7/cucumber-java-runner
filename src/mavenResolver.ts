@@ -8,9 +8,18 @@ import * as vscode from 'vscode';
 
 /**
  * Compiles the Maven project before running tests
- * Only compiles if the target directory doesn't exist
+ * Only compiles if the target directory doesn't exist and autoCompileMaven is enabled
  */
 async function compileMavenProject(projectRoot: string): Promise<boolean> {
+  // Check if auto-compilation is enabled
+  const config = vscode.workspace.getConfiguration('cucumberJavaRunner');
+  const autoCompileMaven = config.get<boolean>('autoCompileMaven', true);
+
+  if (!autoCompileMaven) {
+    console.log('Auto-compilation is disabled in settings');
+    return true;
+  }
+
   const targetDir = path.join(projectRoot, 'target');
 
   // Check if target directory exists

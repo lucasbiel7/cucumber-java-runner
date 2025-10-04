@@ -19,11 +19,12 @@ This is an enhanced version of the original [Cucumber Java Easy Runner](https://
 - **📍 Precise Error Location**: Error markers appear on the exact line of the failed step, making debugging instant
 - **🎯 Detailed Error Messages**: See the exact step that failed with complete stack trace and error details
 - **🔍 Multiple Failure Support**: When multiple scenarios fail, each shows its specific error at the correct location
-- **⚡ Optimized Maven Compilation**: Only compiles when `target` folder doesn't exist (much faster execution)
+- **⚡ Optimized Maven Compilation**: Only compiles when `target` folder doesn't exist (much faster execution) - now configurable!
 - **🐛 Debug & Run Modes**: Both modes now use the same unified approach with proper result tracking
 - **📝 JSON Result Analysis**: Uses Cucumber's JSON output to determine pass/fail status with detailed error messages
 - **🧹 Code Refactoring**: Consolidated duplicate code and extracted result processing into dedicated module
 - **🔧 Cleaner Architecture**: Simplified codebase with better separation of concerns
+- **⚙️ Flexible Configuration**: Control compilation, exclude directories, and add external step definitions (v1.0.6+)
 
 ### 🔍 Technical Improvements
 
@@ -133,39 +134,85 @@ You can also right-click on feature files:
 
 ## ⚙️ Configuration
 
-Access settings via: **Settings → Extensions → Cucumber Java Runner**
+Access settings via: **Settings → Extensions → Cucumber Java Runner** or edit your `settings.json` file directly.
+
+### Available Settings
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
-| `enableCodeLens` | boolean | `false` | Enable CodeLens buttons (▶ Run, 🐛 Debug) in feature files. When disabled, use Test Explorer instead for a cleaner interface. |
-| `objectFactory` | string | `""` | Custom Cucumber ObjectFactory class for dependency injection (e.g., Spring, Guice, PicoContainer). Leave empty for default. |
-| `showDetailedErrors` | boolean | `true` | Show detailed error messages with stack traces in Test Explorer when scenarios fail. |
-| `autoCompileMaven` | boolean | `true` | Automatically compile Maven projects before running tests (only when target directory is missing). |
-| `excludeBuildDirectories` | array | `["target", "build", ...]` | Directories to exclude when discovering feature files to avoid duplicates. |
+| `cucumberJavaRunner.enableCodeLens` | boolean | `false` | Enable CodeLens buttons (▶ Run, 🐛 Debug) in feature files. When disabled, use Test Explorer instead for a cleaner interface. |
+| `cucumberJavaRunner.objectFactory` | string | `""` | Custom Cucumber ObjectFactory class for dependency injection (e.g., Spring, Guice, PicoContainer). Leave empty for default. |
+| `cucumberJavaRunner.autoCompileMaven` | boolean | `true` | Automatically compile Maven projects before running tests (only when target directory is missing). |
+| `cucumberJavaRunner.excludeBuildDirectories` | array | `["target", "build", "out", "dist", "node_modules", ".git"]` | Directories to exclude when discovering feature files to avoid duplicates. |
+| `cucumberJavaRunner.additionalGluePaths` | array | `[]` | Additional glue paths for step definitions (e.g., from external libraries). Use Java package format. |
 
-### Examples
+### Configuration Examples
 
-**Using Spring Dependency Injection:**
+#### Using Spring Dependency Injection
 ```json
 {
   "cucumberJavaRunner.objectFactory": "cucumber.api.spring.SpringFactory"
 }
 ```
 
-**Disable auto-compilation:**
+#### Using Guice Dependency Injection
+```json
+{
+  "cucumberJavaRunner.objectFactory": "cucumber.api.guice.GuiceFactory"
+}
+```
+
+#### Disable Auto-Compilation
 ```json
 {
   "cucumberJavaRunner.autoCompileMaven": false
 }
 ```
 
-**Custom excluded directories:**
+#### Custom Excluded Directories
 ```json
 {
   "cucumberJavaRunner.excludeBuildDirectories": [
     "target",
     "build",
-    "generated"
+    "generated",
+    "bin"
+  ]
+}
+```
+
+#### Additional Glue Paths (External Step Definitions)
+Use this when you have step definitions in external libraries or modules:
+```json
+{
+  "cucumberJavaRunner.additionalGluePaths": [
+    "com.external.library.steps",
+    "org.another.library.cucumber.steps"
+  ]
+}
+```
+
+#### Enable CodeLens Buttons
+```json
+{
+  "cucumberJavaRunner.enableCodeLens": true
+}
+```
+
+#### Complete Configuration Example
+```json
+{
+  "cucumberJavaRunner.enableCodeLens": false,
+  "cucumberJavaRunner.objectFactory": "cucumber.api.spring.SpringFactory",
+  "cucumberJavaRunner.autoCompileMaven": true,
+  "cucumberJavaRunner.excludeBuildDirectories": [
+    "target",
+    "build",
+    "out",
+    "dist"
+  ],
+  "cucumberJavaRunner.additionalGluePaths": [
+    "com.mycompany.shared.steps"
   ]
 }
 ```
@@ -183,19 +230,6 @@ Access settings via: **Settings → Extensions → Cucumber Java Runner**
 - Traditional play buttons in feature files
 - Similar to IntelliJ IDEA experience
 - Enable via settings if preferred
-
-## ⚙️ Settings
-
-Configure the extension behavior in VS Code Settings:
-
-```json
-{
-  "cucumberJavaRunner.enableCodeLens": false
-}
-```
-
-**Settings Options:**
-- `enableCodeLens` (boolean, default: false): Show play buttons in feature files. When disabled, use Test Explorer for a cleaner interface.
 
 ## 📦 Installation
 
@@ -229,9 +263,9 @@ This extension is designed to work seamlessly with the [Official Cucumber Extens
 
 See [USING_WITH_CUCUMBER_OFFICIAL.md](USING_WITH_CUCUMBER_OFFICIAL.md) for detailed compatibility guide.
 
-## ⚙️ Configuration
+## 🚀 Zero Configuration Required
 
-**Zero Configuration Required!** The extension works automatically with standard Maven projects:
+The extension works automatically with standard Maven projects:
 
 - ✅ Auto-detects step definition glue path
 - ✅ Finds all feature files in your workspace
