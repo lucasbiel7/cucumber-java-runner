@@ -111,6 +111,9 @@ Isso mostrará exatamente o que será incluído nas release notes.
 ## Requisitos
 
 - `VSCE_TOKEN` - Secret configurado no GitHub para publicar no marketplace
+- `PAT_TOKEN` - Personal Access Token para permitir que tags criadas pelo workflow disparem o publish workflow
+  - **⚠️ IMPORTANTE**: Sem este token, o workflow de publish não será disparado automaticamente
+  - Veja [SETUP_PAT.md](SETUP_PAT.md) para instruções de configuração
 - `GITHUB_TOKEN` - Automaticamente disponível (não precisa configurar)
 - CHANGELOG.md deve seguir o formato com `## [versão]` como cabeçalho
 

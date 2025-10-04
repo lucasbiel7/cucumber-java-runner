@@ -1,164 +1,185 @@
-# 🤖 GitHub Automation
+# GitHub Actions & Release Automation
 
-Esta pasta contém todos os arquivos de automação e CI/CD do projeto.
+Este diretório contém a configuração de CI/CD e documentação sobre o processo de release automatizado.
 
 ## 📁 Estrutura
 
 ```
 .github/
-├── workflows/              # GitHub Actions workflows
-│   ├── ci.yml             # CI - Integração Contínua
-│   ├── publish.yml        # Publicação automática no Marketplace
-│   └── pre-release.yml    # Pre-releases para testes
-├── release.yml            # Configuração de release notes
-├── WORKFLOWS.md           # 📖 Guia completo dos workflows
-├── SECRETS_SETUP.md       # 🔐 Como configurar secrets
-└── README.md             # 📄 Este arquivo
+├── workflows/
+│   ├── ci.yml              # Continuous Integration
+│   ├── tag-release.yml     # Auto tag creation from package.json
+│   ├── publish.yml         # Publish to marketplace + GitHub Release
+│   └── pre-release.yml     # Pre-release builds
+├── scripts/
+│   ├── extract-changelog.sh   # Extract version from CHANGELOG
+│   └── check-secrets.sh       # Verify secrets configuration
+└── docs/
+    ├── RELEASE_NOTES.md       # How release automation works
+    ├── SETUP_PAT.md           # Setup Personal Access Token
+    └── WORKFLOW_FIX.md        # Fix for workflow trigger issue
 ```
 
 ## 🚀 Quick Start
 
-### 1. Configurar Secrets (Primeira vez)
+### Para fazer um novo release:
 
-Para publicar automaticamente, configure o token:
+1. **Atualizar versão**:
+   ```bash
+   # Editar package.json manualmente ou usar:
+   npm version patch  # 1.0.2 → 1.0.3
+   npm version minor  # 1.0.2 → 1.1.0
+   npm version major  # 1.0.2 → 2.0.0
+   ```
 
-👉 **Leia**: [SECRETS_SETUP.md](SECRETS_SETUP.md)
+2. **Atualizar CHANGELOG.md**:
+   - Adicionar seção com a nova versão
+   - Documentar todas as mudanças
 
-**Resumo rápido:**
-1. Criar token em: https://dev.azure.com → Personal Access Tokens
-2. Adicionar secret no GitHub: Settings → Secrets → Actions → `VSCE_TOKEN`
+3. **Commit e Push**:
+   ```bash
+   git add package.json CHANGELOG.md
+   git commit -m "chore: release v1.0.3"
+   git push origin main
+   ```
 
-### 2. Publicar uma Nova Versão
+4. **Automático**:
+   - ✅ Tag criada automaticamente
+   - ✅ Publicado no VS Code Marketplace
+   - ✅ GitHub Release criado com notes do CHANGELOG
+
+## ⚙️ Configuração Necessária
+
+### Secrets Obrigatórios
+
+Configure em: **Settings → Secrets and variables → Actions**
+
+1. **`VSCE_TOKEN`** - Token do VS Code Marketplace
+   - Obter em: https://marketplace.visualstudio.com/manage
+   - Necessário para: Publicar extensão
+
+2. **`PAT_TOKEN`** - Personal Access Token
+   - Criar em: https://github.com/settings/tokens
+   - Scopes: `repo` + `workflow`
+   - Necessário para: Disparar workflow de publish
+   - **⚠️ Sem isso, o publish não será disparado automaticamente**
+   - Ver: [SETUP_PAT.md](SETUP_PAT.md)
+
+3. **`GITHUB_TOKEN`** - ✅ Automático (já disponível)
+
+### Verificar Configuração
 
 ```bash
-# Atualizar versão
-npm version patch  # 1.0.0 → 1.0.1
-
-# Push (cria tag automaticamente)
-git push
-git push --tags
-
-# GitHub Actions publica automaticamente! 🎉
+# Executar script de verificação
+./.github/scripts/check-secrets.sh
 ```
 
-### 3. Ver Workflows em Ação
+## 📚 Documentação
 
-```
-https://github.com/lucasbiel7/cucumber-java-runner/actions
-```
+- **[RELEASE_NOTES.md](RELEASE_NOTES.md)** - Como funciona o processo de release
+- **[SETUP_PAT.md](SETUP_PAT.md)** - Configuração do Personal Access Token
+- **[WORKFLOW_FIX.md](WORKFLOW_FIX.md)** - Solução para problema de workflow não disparar
 
-## 📚 Documentação Completa
+## 🔄 Workflows
 
-- **[WORKFLOWS.md](WORKFLOWS.md)** - Guia completo dos workflows
-- **[SECRETS_SETUP.md](SECRETS_SETUP.md)** - Como configurar secrets
-- **[release.yml](release.yml)** - Configuração de release notes
+### CI (`ci.yml`)
+- **Quando**: Push/PR em `main` ou `develop`
+- **O que faz**:
+  - Lint do código
+  - Compilação TypeScript
+  - Testes (se houver)
+  - Cria artefato VSIX
 
-## 🔄 Workflows Disponíveis
+### Auto Tag (`tag-release.yml`)
+- **Quando**: Push na branch `main`
+- **O que faz**:
+  - Lê versão do `package.json`
+  - Verifica se tag já existe
+  - Cria e faz push da tag `v${version}`
+  - **Usa PAT_TOKEN para disparar publish**
 
-### ✅ CI (Integração Contínua)
-- **Trigger**: Push/PR para `main` ou `develop`
-- **Ações**: Compila, testa, cria pacote .vsix
-- **Badge**: [![CI](https://github.com/lucasbiel7/cucumber-java-runner/actions/workflows/ci.yml/badge.svg)](https://github.com/lucasbiel7/cucumber-java-runner/actions/workflows/ci.yml)
+### Publish (`publish.yml`)
+- **Quando**: Tag criada (`v*`)
+- **O que faz**:
+  - Compila e empacota extensão
+  - Publica no VS Code Marketplace
+  - Extrai changelog da versão
+  - Cria GitHub Release com:
+    - Link do marketplace
+    - Instruções de instalação
+    - Notas de release do CHANGELOG
+    - Arquivo VSIX anexado
 
-### 🚀 Publish (Publicação)
-- **Trigger**: Tag `v*` (ex: v1.0.0)
-- **Ações**: Publica no Marketplace + cria GitHub Release
-- **Badge**: [![Publish](https://github.com/lucasbiel7/cucumber-java-runner/actions/workflows/publish.yml/badge.svg)](https://github.com/lucasbiel7/cucumber-java-runner/actions/workflows/publish.yml)
-
-### 🧪 Pre-Release (Beta)
-- **Trigger**: Push para `develop` ou manual
-- **Ações**: Cria pre-release no GitHub para testes
-
-## 🎯 Fluxo de Trabalho Recomendado
-
-```mermaid
-graph LR
-    A[Desenvolver Feature] --> B[Push para develop]
-    B --> C[CI verifica]
-    C --> D[Pre-release criado]
-    D --> E[Testar localmente]
-    E --> F[Merge para main]
-    F --> G[Criar tag v1.0.0]
-    G --> H[Publish workflow]
-    H --> I[No Marketplace! 🎉]
-```
-
-**Em texto:**
-
-1. **Desenvolver** → feature branch
-2. **PR para develop** → CI roda automaticamente
-3. **Merge para develop** → Pre-release criado
-4. **Testar** → Baixar .vsix e testar
-5. **Merge para main** → Quando estiver pronto
-6. **Criar tag** → `npm version patch && git push --tags`
-7. **Publicado!** → Automaticamente no Marketplace
-
-## ⚙️ Configurações
-
-### release.yml
-
-Define como as release notes são geradas automaticamente.
-
-**Categorias configuradas:**
-- 🚀 New Features
-- 🐛 Bug Fixes
-- 📝 Documentation
-- 🔧 Maintenance
-- ⚡ Performance
-- 🧪 Tests
-- 🎨 UI/UX
-
-**Como usar:**
-Adicione labels nos seus commits/PRs:
-```bash
-git commit -m "feat: nova funcionalidade" # → New Features
-git commit -m "fix: correção de bug"      # → Bug Fixes
-git commit -m "docs: atualiza README"     # → Documentation
-```
+### Pre-Release (`pre-release.yml`)
+- **Quando**: Push na branch `develop`
+- **O que faz**:
+  - Cria pre-release no GitHub
+  - Tag: `v${version}-beta.${run_number}`
+  - Não publica no marketplace
 
 ## 🐛 Troubleshooting
 
-### Workflow não executou
+### Publish workflow não dispara após criar tag?
 
-**Verificar:**
-- [ ] Push foi feito na branch correta?
-- [ ] Tag tem formato `v*`?
-- [ ] Arquivo .yml está em `.github/workflows/`?
+**Problema**: O `GITHUB_TOKEN` padrão não dispara outros workflows.
 
-### Erro de publicação
+**Solução**: Configure o `PAT_TOKEN` como descrito em [WORKFLOW_FIX.md](WORKFLOW_FIX.md)
 
-**Verificar:**
-- [ ] Secret `VSCE_TOKEN` está configurado?
-- [ ] Token não expirou?
-- [ ] Publisher existe no marketplace?
-- [ ] Versão no package.json foi incrementada?
+### Tag já existe?
 
-### Ver logs detalhados
+```bash
+# Listar tags
+git tag -l
 
-1. Acesse: Actions
-2. Clique no workflow que falhou
-3. Clique no job
-4. Veja logs de cada step
+# Deletar tag local e remota (cuidado!)
+git tag -d v1.0.3
+git push origin :refs/tags/v1.0.3
+```
 
-## 📊 Métricas
+### VSCE_TOKEN expirado?
 
-Após configurar, você pode ver:
+1. Gerar novo token em: https://marketplace.visualstudio.com/manage
+2. Atualizar secret no GitHub
 
-- ✅ Quantos builds passaram/falharam
-- 📦 Quantas versões foram publicadas
-- ⏱️ Tempo médio de build
-- 📈 Histórico de releases
+### Verificar logs dos workflows
 
-Acesse: **Insights** → **Actions**
+1. Ir para: **Actions** tab no GitHub
+2. Selecionar o workflow com problema
+3. Ver logs detalhados de cada step
 
-## 🔗 Links Úteis
+## 🎯 Best Practices
+
+### Versionamento
+- **Patch** (1.0.x): Bug fixes, pequenas correções
+- **Minor** (1.x.0): Novas features, mudanças compatíveis
+- **Major** (x.0.0): Breaking changes
+
+### CHANGELOG
+- Seguir formato [Keep a Changelog](https://keepachangelog.com/)
+- Usar categorias: Added, Changed, Deprecated, Removed, Fixed, Security
+- Incluir data de release
+- Separar versões com `---`
+
+### Commits
+```bash
+# Usar conventional commits
+git commit -m "feat: add new feature"
+git commit -m "fix: resolve bug"
+git commit -m "chore: update dependencies"
+git commit -m "docs: improve documentation"
+```
+
+## 🔐 Segurança
+
+- ✅ Secrets são criptografados pelo GitHub
+- ✅ Secrets não aparecem em logs
+- ✅ PAT com scopes mínimos necessários
+- ⚠️ Renovar PAT periodicamente
+- ⚠️ Nunca commitar tokens no código
+
+## 📖 Referências
 
 - [GitHub Actions Documentation](https://docs.github.com/en/actions)
-- [VS Code Publishing Guide](https://code.visualstudio.com/api/working-with-extensions/publishing-extension)
-- [Azure DevOps PAT](https://learn.microsoft.com/en-us/azure/devops/organizations/accounts/use-personal-access-tokens-to-authenticate)
-
----
-
-**Automação configurada! 🚀**
-
-Qualquer dúvida, consulte os guias detalhados ou abra uma issue!
+- [VS Code Extension Publishing](https://code.visualstudio.com/api/working-with-extensions/publishing-extension)
+- [Semantic Versioning](https://semver.org/)
+- [Keep a Changelog](https://keepachangelog.com/)

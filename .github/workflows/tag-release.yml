@@ -17,6 +17,7 @@ jobs:
       uses: actions/checkout@v4
       with:
         fetch-depth: 0  # Fetch all history for tags
+        token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
 
     - name: Setup Node.js
       uses: actions/setup-node@v4
@@ -49,7 +50,7 @@ jobs:
         git tag -a "${{ steps.package_version.outputs.tag }}" -m "Release ${{ steps.package_version.outputs.tag }}"
         git push origin "${{ steps.package_version.outputs.tag }}"
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
 
     - name: Tag already exists
       if: steps.check_tag.outputs.exists == 'true'
