@@ -4,6 +4,7 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import { exec } from 'child_process';
+import * as vscode from 'vscode';
 
 /**
  * Compiles the Maven project before running tests
@@ -88,27 +89,58 @@ export async function resolveMavenClasspath(projectRoot: string): Promise<string
 /**
  * Finds the steps directories in the project and converts to Java package structure
  */
-export async function findGluePath(projectRoot: string): Promise<string | null> {
+/**
+ * Finds the glue path for Cucumber step definitions.
+ *
+ * This function searches for step definitions in two ways:
+ * 1. Checks workspace configuration for additional glue paths (e.g., external libraries)
+ * 2. Auto-discovers step definitions in the project's src/test/java directory
+ *
+ * Configuration example in settings.json:
+ * {
+ *   "cucumberJavaRunner.additionalGluePaths": [
+ *     "com.external.library.steps",
+ *     "org.another.library.cucumber.steps"
+ *   ]
+ * }
+ *
+ * @param projectRoot The root directory of the Maven project
+ * @returns A comma-separated string of glue paths, or null if none found
+ */
+export async function findGluePath(projectRoot: string): Promise<string[] | null> {
+  const gluePaths: string[] = [];
+
+  // Check for additional glue paths from workspace configuration
+  const config = vscode.workspace.getConfiguration('cucumberJavaRunner');
+  const additionalGluePaths = config.get<string[]>('additionalGluePaths');
+
+  if (additionalGluePaths && Array.isArray(additionalGluePaths) && additionalGluePaths.length > 0) {
+    console.log(`Found ${additionalGluePaths.length} additional glue path(s) from configuration`);
+    gluePaths.push(...additionalGluePaths);
+  }
 
   // In Maven projects, test code is usually in src/test/java
   const testDir = path.join(projectRoot, 'src', 'test', 'java');
 
-  if (!fs.existsSync(testDir)) {
+  if (fs.existsSync(testDir)) {
+    // Recursively search for steps directories
+    const stepsDir = await findStepsDir(testDir, fs);
+
+    if (stepsDir) {
+      // Create the Java package name for the steps directory
+      // src/test/java/org/example/steps -> org.example.steps
+      const packagePath = path.relative(testDir, stepsDir).replace(/\\/g, '/').replace(/\//g, '.');
+      gluePaths.push(packagePath);
+    }
+  }
+
+  if (gluePaths.length === 0) {
     return null;
   }
 
-  // Recursively search for steps directories
-  const stepsDir = await findStepsDir(testDir, fs);
-
-  if (!stepsDir) {
-    return null;
-  }
-
-  // Create the Java package name for the steps directory
-  // src/test/java/org/example/steps -> org.example.steps
-  const packagePath = path.relative(testDir, stepsDir).replace(/\\/g, '/').replace(/\//g, '.');
-
-  return packagePath;
+  // Return all glue paths as an array
+  console.log(`Resolved glue path(s): ${gluePaths.join(', ')}`);
+  return gluePaths;
 }
 
 /**

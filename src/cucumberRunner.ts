@@ -37,24 +37,11 @@ export async function runCucumberTest(
 
   // Get the relative path of the feature file in the project
   const relativePath = path.relative(workspaceFolder.uri.fsPath, uri.fsPath);
-
-  // Save the run mode information
-  let runMode = 'feature';
-  if (lineNumber && lineNumber > 0) {
-    runMode = exampleLine ? 'example' : 'scenario';
-  }
-
-  const modeText = isDebug ? 'Debug' : 'Run';
-  console.log(`${modeText} mode: ${runMode}`);
-  console.log(`Feature: ${relativePath}`);
-  console.log(`Scenario line: ${lineNumber || 'entire feature'}`);
-  console.log(`Example line: ${exampleLine || 'all scenarios'}`);
-
   try {
     // Scan the project to find the steps directory
-    const gluePath = await findGluePath(workspaceFolder.uri.fsPath);
+    const gluePaths = await findGluePath(workspaceFolder.uri.fsPath);
 
-    if (!gluePath) {
+    if (!gluePaths) {
       // If glue path is not found, ask the user
       const userInput = await vscode.window.showInputBox({
         prompt: 'Enter glue path for steps directory (e.g. org.example.steps)',
@@ -69,27 +56,16 @@ export async function runCucumberTest(
       return await executeCucumberTest(
         workspaceFolder.uri.fsPath,
         relativePath,
-        userInput,
+        [userInput],
         lineNumber,
         exampleLine,
         isDebug
       );
     } else {
-      // If glue path is found, run/debug directly
-      let message = '';
-      if (runMode === 'feature') {
-        message = `${isDebug ? 'Debugging' : 'Running'} feature file with glue path "${gluePath}"`;
-      } else if (runMode === 'scenario') {
-        message = `${isDebug ? 'Debugging' : 'Running'} scenario at line ${lineNumber} with glue path "${gluePath}"`;
-      } else if (runMode === 'example') {
-        message = `${isDebug ? 'Debugging' : 'Running'} example at line ${lineNumber}:${exampleLine} with glue path "${gluePath}"`;
-      }
-
-      vscode.window.showInformationMessage(message);
       return await executeCucumberTest(
         workspaceFolder.uri.fsPath,
         relativePath,
-        gluePath,
+        gluePaths,
         lineNumber,
         exampleLine,
         isDebug
@@ -109,7 +85,7 @@ export async function runCucumberTest(
 async function executeCucumberTest(
   projectRoot: string,
   featurePath: string,
-  gluePath: string,
+  gluePaths: string[],
   lineNumber?: number,
   exampleLineNumber?: number,
   isDebug = false
@@ -192,28 +168,29 @@ async function executeCucumberTest(
   }
 
   // Show progress while compiling and resolving dependencies
-  return await vscode.window.withProgress({
+  const classPaths = await vscode.window.withProgress({
     location: vscode.ProgressLocation.Notification,
     title: 'Compiling project and resolving dependencies...',
     cancellable: false
-  }, async () => {
-    // Resolve Maven classpath including all dependencies
-    const classPaths = await resolveMavenClasspath(projectRoot);
+  }, async () =>  await resolveMavenClasspath(projectRoot));
 
     // Create a unique output file for the test results
     const resultFile = path.join(projectRoot, 'target', `.cucumber-result-${Date.now()}.json`);
 
+    // Get custom object factory from workspace configuration
+    const config = vscode.workspace.getConfiguration('cucumberJavaRunner');
+    const customObjectFactory = config.get<string>('objectFactory');
     // Build the arguments for Cucumber CLI with JSON plugin to capture results
     const cucumberArgs = [
-      '--glue', gluePath,
+      ...gluePaths.flatMap(gluePath => ['--glue', gluePath]),
       '--plugin', 'pretty',
       '--plugin', `json:${resultFile}`,
+      ...(customObjectFactory ? ['--object-factory', customObjectFactory] : []),
       cucumberPath
     ].join(' ');
 
     // Use VS Code debug API for both run and debug modes
     return await runWithVSCode(workspaceFolder, configName, classPaths, cucumberArgs, projectRoot, resultFile, isDebug);
-  });
 }
 
 /**
@@ -243,9 +220,6 @@ async function runWithVSCode(
     stopOnEntry: false,
     internalConsoleOptions: 'neverOpen',
   };
-
-  console.log(`Starting ${isDebug ? 'debug' : 'test'} session with config:`, JSON.stringify(config, null, 2));
-  console.log(`Result will be written to: ${resultFile}`);
 
   const started = await vscode.debug.startDebugging(workspaceFolder, config);
 

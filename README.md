@@ -175,6 +175,17 @@ Configure the extension behavior in VS Code Settings:
 - **Dependencies**: Cucumber-JVM in your pom.xml
 - **VS Code Extension**: Java Extension Pack (for debugging support)
 
+## 🤝 Works Great With Official Cucumber Extension
+
+This extension is designed to work seamlessly with the [Official Cucumber Extension](https://marketplace.visualstudio.com/items?itemName=CucumberOpen.cucumber-official).
+
+**Recommended Setup**: Install both extensions together!
+
+- **Official Cucumber**: Provides syntax highlighting, formatting, validation, and step navigation
+- **This Extension**: Provides test execution, debugging, and Test Explorer integration
+
+See [USING_WITH_CUCUMBER_OFFICIAL.md](USING_WITH_CUCUMBER_OFFICIAL.md) for detailed compatibility guide.
+
 ## ⚙️ Configuration
 
 **Zero Configuration Required!** The extension works automatically with standard Maven projects:

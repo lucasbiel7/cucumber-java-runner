@@ -2,6 +2,24 @@
 
 All notable changes to the Cucumber Java Runner extension will be documented in this file.
 
+## [1.0.4] - 2025-10-04
+
+### 🐛 Bug Fixes
+
+#### Fixed
+- **Cucumber Official Extension Compatibility**: Removed `languages` section from `package.json` to prevent conflicts with the official Cucumber extension (`CucumberOpen.cucumber-official`)
+  - Previously, our extension was redefining the `gherkin` language for `.feature` files, which was overriding the formatting provided by the official Cucumber extension
+  - Now both extensions work together seamlessly - the official extension handles language definitions and formatting, while our extension provides test running capabilities
+  - Users can now use both extensions simultaneously without losing Gherkin formatting features
+
+### 📝 Technical Details
+
+- The official Cucumber extension already defines the `gherkin` language and its formatting rules
+- Our extension doesn't need to redefine this - we only consume `.feature` files through `activationEvents`
+- This fix ensures proper separation of concerns between the two extensions
+
+---
+
 ## [1.0.3] - 2025-10-04
 
 ### 🔧 Code Quality & Infrastructure
