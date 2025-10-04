@@ -1,47 +1,44 @@
-# Source files
+# VS Code Extension Ignore File
+# Files and folders to exclude from the extension package
+
+# Source files (já compilados em /out)
 src/**
 tsconfig.json
-.eslintrc.json
-*.ts
 
-# Git
-.git
+# Node modules
+node_modules/**
+
+# Build files
+*.vsix
+cucumber-java-runner-*.vsix
+
+# Development files
+.vscode/**
+.vscode-test/**
+.git/**
 .gitignore
-.github
 
-# Build
-node_modules
-npm-debug.log*
-.npm
-*.tsbuildinfo
+# Documentation not needed in package
+INSTALL.md
+ARCHITECTURE.md
+PUBLISH.md
+install-extension.sh
 
-# Auxiliary files
-.vscode
-.vscode-test
-coverage
-tmp
-temp
-**/*.map
+# Package lock (não necessário para usuários finais)
+package-lock.json
 
-# Tests
+# Temporary files
+*.log
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Test files
 test/**
-**/*.spec.*
-**/*.test.*
+out/test/**
 
-# Docs and assets not needed in package
-docs/**/*
-# Ignore all images except logo.png
-images/**
-!images/logo.png
-
-# Developer files
-.editorconfig
-.prettierrc
-.travis.yml
-.env*
-*.md
-!README.md
-!CHANGELOG.md
-
-# Packaging
-*.vsix 
+# Images not used (keep only logo.png)
+images/logo.svg
+images/cucumber.png
+images/java.png
