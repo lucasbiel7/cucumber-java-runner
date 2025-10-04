@@ -3,16 +3,16 @@
  */
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as fs from 'fs';
 import { parseFeatureFile } from './featureParser';
-import { runSelectedTest } from './testRunner';
-import { debugSelectedTest } from './debugRunner';
+import { runCucumberTest } from './cucumberRunner';
 
 /**
  * Test controller for Cucumber tests
  */
 export class CucumberTestController {
-  private controller: vscode.TestController;
-  private watchedFiles = new Map<string, vscode.TestItem>();
+  private readonly controller: vscode.TestController;
+  private readonly watchedFiles = new Map<string, vscode.TestItem>();
 
   constructor(context: vscode.ExtensionContext) {
     this.controller = vscode.tests.createTestController('cucumberJavaRunner', 'Cucumber Java Tests');
@@ -35,7 +35,7 @@ export class CucumberTestController {
     this.controller.createRunProfile(
       'Run Cucumber Tests',
       vscode.TestRunProfileKind.Run,
-      (request, token) => this.runTests(request, token),
+      (request, token) => this.executeTests(request, token, false),
       true
     );
 
@@ -43,7 +43,7 @@ export class CucumberTestController {
     this.controller.createRunProfile(
       'Debug Cucumber Tests',
       vscode.TestRunProfileKind.Debug,
-      (request, token) => this.debugTests(request, token),
+      (request, token) => this.executeTests(request, token, true),
       true
     );
 
@@ -188,7 +188,7 @@ export class CucumberTestController {
     }
   }
 
-  private async runTests(request: vscode.TestRunRequest, token: vscode.CancellationToken) {
+  private async executeTests(request: vscode.TestRunRequest, token: vscode.CancellationToken, isDebug: boolean) {
     const run = this.controller.createTestRun(request);
 
     const testItems = request.include || this.gatherAllTests();
@@ -198,23 +198,7 @@ export class CucumberTestController {
         break;
       }
 
-      await this.runSingleTest(testItem, run);
-    }
-
-    run.end();
-  }
-
-  private async debugTests(request: vscode.TestRunRequest, token: vscode.CancellationToken) {
-    const run = this.controller.createTestRun(request);
-
-    const testItems = request.include || this.gatherAllTests();
-
-    for (const testItem of testItems) {
-      if (token.isCancellationRequested) {
-        break;
-      }
-
-      await this.debugSingleTest(testItem, run);
+      await this.executeSingleTest(testItem, run, isDebug);
     }
 
     run.end();
@@ -231,81 +215,127 @@ export class CucumberTestController {
     return tests;
   }
 
-  private async runSingleTest(testItem: vscode.TestItem, run: vscode.TestRun) {
+  private async executeSingleTest(testItem: vscode.TestItem, run: vscode.TestRun, isDebug: boolean) {
     run.started(testItem);
 
     try {
       const uri = testItem.uri!;
+      const mode = isDebug ? 'Debugging' : 'Running';
+      const consoleType = isDebug ? 'debug console' : 'terminal';
+      const sessionType = isDebug ? 'Debug session' : 'Test';
 
-      // Check test type based on ID structure
+      let lineNumber: number | undefined;
+      let exampleLine: number | undefined;
+
+      // Check test type based on ID structure and extract line numbers
       if (testItem.id.includes(':example:')) {
         // This is an example row
         const parts = testItem.id.split(':');
-        const scenarioLine = parseInt(parts[2]); // scenario line number
-        const exampleLine = parseInt(parts[4]); // example line number
-        console.log(`Running example at scenario line ${scenarioLine}, example line ${exampleLine} for file ${uri.fsPath}`);
-        await runSelectedTest(uri, scenarioLine, exampleLine);
+        lineNumber = parseInt(parts[2]); // scenario line number
+        exampleLine = parseInt(parts[4]); // example line number
+        console.log(`${mode} example at scenario line ${lineNumber}, example line ${exampleLine} for file ${uri.fsPath}`);
       } else if (testItem.id.includes(':scenario:')) {
         // This is a scenario
         const parts = testItem.id.split(':scenario:');
-        const lineNumber = parseInt(parts[1]);
-        console.log(`Running scenario at line ${lineNumber} for file ${uri.fsPath}`);
-        await runSelectedTest(uri, lineNumber);
+        lineNumber = parseInt(parts[1]);
+        console.log(`${mode} scenario at line ${lineNumber} for file ${uri.fsPath}`);
       } else {
         // This is a feature file
-        console.log(`Running entire feature file ${uri.fsPath}`);
-        await runSelectedTest(uri);
+        console.log(`${mode} entire feature file ${uri.fsPath}`);
       }
 
-      // Show test as running - user will see results in terminal
-      vscode.window.showInformationMessage(`Test started for ${testItem.label}. Check terminal for results.`);
+      // Execute the test with extracted parameters
+      const result = await runCucumberTest(uri, lineNumber, exampleLine, isDebug);
 
-      // Wait 2 seconds to show "running" state, then mark as passed
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      run.passed(testItem);
+      // Show test as running - user will see results in terminal/debug console
+      vscode.window.showInformationMessage(`${sessionType} started for ${testItem.label}. Check ${consoleType} for results.`);
+
+      // If this is a feature file with children (scenarios), mark each child individually
+      if (!lineNumber && testItem.children.size > 0 && result.resultFile) {
+        this.markChildrenFromResults(testItem, run, result.resultFile);
+      }
+
+      // Mark the main test item as passed or failed
+      if (result.passed) {
+        run.passed(testItem);
+      } else {
+        run.failed(testItem, new vscode.TestMessage(`Test failed. Check ${consoleType} for details.`));
+      }
+
+      // Clean up result file if it exists
+      if (result.resultFile && fs.existsSync(result.resultFile)) {
+        try {
+          fs.unlinkSync(result.resultFile);
+          console.log(`Cleaned up result file: ${result.resultFile}`);
+        } catch (error) {
+          console.error('Error cleaning up result file:', error);
+        }
+      }
 
     } catch (error) {
-      console.error('Test execution error:', error);
-      run.failed(testItem, new vscode.TestMessage(`Test failed: ${error}`));
+      const errorType = isDebug ? 'Debug' : 'Test execution';
+      console.error(`${errorType} error:`, error);
+      run.failed(testItem, new vscode.TestMessage(`${errorType} failed: ${error}`));
     }
   }
 
-  private async debugSingleTest(testItem: vscode.TestItem, run: vscode.TestRun) {
-    run.started(testItem);
-
+  /**
+   * Marks child test items (scenarios/examples) based on Cucumber JSON results
+   */
+  private markChildrenFromResults(featureItem: vscode.TestItem, run: vscode.TestRun, resultFile: string) {
     try {
-      const uri = testItem.uri!;
-
-      // Check test type based on ID structure
-      if (testItem.id.includes(':example:')) {
-        // This is an example row
-        const parts = testItem.id.split(':');
-        const scenarioLine = parseInt(parts[2]); // scenario line number
-        const exampleLine = parseInt(parts[4]); // example line number
-        console.log(`Debugging example at scenario line ${scenarioLine}, example line ${exampleLine} for file ${uri.fsPath}`);
-        await debugSelectedTest(uri, scenarioLine, exampleLine);
-      } else if (testItem.id.includes(':scenario:')) {
-        // This is a scenario
-        const parts = testItem.id.split(':scenario:');
-        const lineNumber = parseInt(parts[1]);
-        console.log(`Debugging scenario at line ${lineNumber} for file ${uri.fsPath}`);
-        await debugSelectedTest(uri, lineNumber);
-      } else {
-        // This is a feature file
-        console.log(`Debugging entire feature file ${uri.fsPath}`);
-        await debugSelectedTest(uri);
+      if (!fs.existsSync(resultFile)) {
+        console.error(`Result file not found: ${resultFile}`);
+        return;
       }
 
-      // Show test as running - user will see results in debug console
-      vscode.window.showInformationMessage(`Debug session started for ${testItem.label}. Check debug console for results.`);
+      const fileContent = fs.readFileSync(resultFile, 'utf-8');
+      const results = JSON.parse(fileContent);
 
-      // Wait 2 seconds to show "running" state, then mark as passed
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      run.passed(testItem);
+      console.log(`Marking children from results: ${resultFile}`);
+
+      // Cucumber JSON format: array of features
+      for (const feature of results) {
+        if (feature.elements) {
+          for (const scenario of feature.elements) {
+            const scenarioLine = scenario.line;
+
+            // Check if all steps in the scenario passed
+            let scenarioPassed = true;
+            let failedStep = null;
+
+            if (scenario.steps) {
+              for (const step of scenario.steps) {
+                if (step.result && step.result.status !== 'passed' && step.result.status !== 'skipped') {
+                  scenarioPassed = false;
+                  failedStep = step;
+                  break;
+                }
+              }
+            }
+
+            // Find the corresponding test item
+            featureItem.children.forEach(child => {
+              // Check if this child matches the scenario line
+              if (child.id.includes(`:scenario:${scenarioLine}`)) {
+                if (scenarioPassed) {
+                  run.passed(child);
+                  console.log(`✅ Scenario at line ${scenarioLine} passed`);
+                } else {
+                  const message = failedStep
+                    ? `Step failed: ${failedStep.name}\nError: ${failedStep.result?.error_message || 'Unknown error'}`
+                    : 'Scenario failed';
+                  run.failed(child, new vscode.TestMessage(message));
+                  console.log(`❌ Scenario at line ${scenarioLine} failed`);
+                }
+              }
+            });
+          }
+        }
+      }
 
     } catch (error) {
-      console.error('Test debug error:', error);
-      run.failed(testItem, new vscode.TestMessage(`Debug failed: ${error}`));
+      console.error('Error marking children from results:', error);
     }
   }
 
