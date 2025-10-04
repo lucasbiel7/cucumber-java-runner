@@ -95,7 +95,9 @@ export function parseFeatureFile(document: vscode.TextDocument): FeatureInfo | n
     }
   }
 
-  if (!featureName) return null;
+  if (!featureName) {
+    return null;
+  }
 
   return {
     name: featureName,
@@ -116,7 +118,7 @@ export function findScenarioAtLine(document: vscode.TextDocument, line: number):
   for (let i = line; i >= 0; i--) {
     const currentLine = lines[i].trim();
     if (currentLine.startsWith('Scenario:') || currentLine.startsWith('Scenario Outline:')) {
-      let name = currentLine.substring(currentLine.indexOf(':') + 1).trim();
+      const name = currentLine.substring(currentLine.indexOf(':') + 1).trim();
       return { name, lineNumber: i + 1 }; // 1-indexed line number for Cucumber
     }
   }
@@ -209,8 +211,9 @@ export function findExampleAtLine(document: vscode.TextDocument, line: number): 
       lineNumber: scenarioOutlineLine,
       exampleLineNumber: line + 1 // 1-indexed
     };
-  } catch (err: any) {
-    console.error(`Error in findExampleAtLine: ${err.message}`);
+  } catch (err: unknown) {
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    console.error(`Error in findExampleAtLine: ${errorMessage}`);
     return null;
   }
 }

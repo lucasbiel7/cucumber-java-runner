@@ -26,7 +26,7 @@ export async function runCucumberTest(
   uri: vscode.Uri,
   lineNumber?: number,
   exampleLine?: number,
-  isDebug: boolean = false
+  isDebug = false
 ): Promise<TestExecutionResult> {
   // Find the project root directory
   const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
@@ -95,8 +95,9 @@ export async function runCucumberTest(
         isDebug
       );
     }
-  } catch (error: any) {
-    vscode.window.showErrorMessage(`Error: ${error.message || 'Unknown error'}`);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    vscode.window.showErrorMessage(`Error: ${errorMessage}`);
     return { passed: false };
   }
 }
@@ -111,7 +112,7 @@ async function executeCucumberTest(
   gluePath: string,
   lineNumber?: number,
   exampleLineNumber?: number,
-  isDebug: boolean = false
+  isDebug = false
 ): Promise<TestExecutionResult> {
   // Path to the feature file to run
   let cucumberPath = featurePath.replace(/\\/g, '/');
@@ -195,7 +196,7 @@ async function executeCucumberTest(
     location: vscode.ProgressLocation.Notification,
     title: 'Compiling project and resolving dependencies...',
     cancellable: false
-  }, async (progress) => {
+  }, async () => {
     // Resolve Maven classpath including all dependencies
     const classPaths = await resolveMavenClasspath(projectRoot);
 

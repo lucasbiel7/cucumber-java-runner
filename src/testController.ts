@@ -112,7 +112,9 @@ export class CucumberTestController {
       const document = await vscode.workspace.openTextDocument(uri);
       const featureInfo = parseFeatureFile(document);
 
-      if (!featureInfo) return;
+      if (!featureInfo) {
+        return;
+      }
 
       // Create unique feature ID using normalized file path
       const featureId = path.normalize(uri.fsPath);
@@ -219,7 +221,10 @@ export class CucumberTestController {
     run.started(testItem);
 
     try {
-      const uri = testItem.uri!;
+      if (!testItem.uri) {
+        throw new Error('Test item has no URI');
+      }
+      const uri = testItem.uri;
       const mode = isDebug ? 'Debugging' : 'Running';
       const consoleType = isDebug ? 'debug console' : 'terminal';
       const sessionType = isDebug ? 'Debug session' : 'Test';

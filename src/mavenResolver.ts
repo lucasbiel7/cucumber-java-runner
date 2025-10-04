@@ -18,7 +18,7 @@ async function compileMavenProject(projectRoot: string): Promise<boolean> {
     return true;
   }
 
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     // Execute Maven compile without clean to avoid unnecessary rebuilds
     const command = 'mvn compile test-compile';
 
@@ -53,7 +53,7 @@ export async function resolveMavenClasspath(projectRoot: string): Promise<string
     console.warn('Maven compilation failed, but continuing with classpath resolution...');
   }
 
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     // Execute Maven command to get the full classpath
     const command = 'mvn dependency:build-classpath -DincludeScope=test -q -Dmdep.outputFile=/dev/stdout';
 
@@ -89,7 +89,6 @@ export async function resolveMavenClasspath(projectRoot: string): Promise<string
  * Finds the steps directories in the project and converts to Java package structure
  */
 export async function findGluePath(projectRoot: string): Promise<string | null> {
-  const fs = require('fs');
 
   // In Maven projects, test code is usually in src/test/java
   const testDir = path.join(projectRoot, 'src', 'test', 'java');
@@ -115,22 +114,22 @@ export async function findGluePath(projectRoot: string): Promise<string | null> 
 /**
  * Recursively searches for the steps directory
  */
-async function findStepsDir(dir: string, fs: any): Promise<string | null> {
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
+async function findStepsDir(dir: string, fsModule: typeof fs): Promise<string | null> {
+  const entries = fsModule.readdirSync(dir, { withFileTypes: true });
 
   // First check if current directory is a steps folder
   if (dir.endsWith('steps') || dir.endsWith('step')) {
     // Check if it contains Java files directly
-    const hasJavaFiles = entries.some((entry: any) => !entry.isDirectory() && entry.name.endsWith('.java'));
+    const hasJavaFiles = entries.some((entry) => !entry.isDirectory() && entry.name.endsWith('.java'));
 
     // Check Java files in subdirectories
     if (!hasJavaFiles) {
       // Recursive inner function to check directories
       const checkSubDirsForJavaFiles = (subDir: string): boolean => {
-        const subEntries = fs.readdirSync(subDir, { withFileTypes: true });
+        const subEntries = fsModule.readdirSync(subDir, { withFileTypes: true });
 
         // Does this subdirectory have Java files?
-        const hasDirectJavaFiles = subEntries.some((entry: any) => !entry.isDirectory() && entry.name.endsWith('.java'));
+        const hasDirectJavaFiles = subEntries.some((entry) => !entry.isDirectory() && entry.name.endsWith('.java'));
         if (hasDirectJavaFiles) {
           return true;
         }
@@ -149,7 +148,7 @@ async function findStepsDir(dir: string, fs: any): Promise<string | null> {
       };
 
       // Accept this directory if subdirectories contain Java files
-      const hasJavaFilesInSubDirs = entries.some((entry: any) => {
+      const hasJavaFilesInSubDirs = entries.some((entry) => {
         if (entry.isDirectory()) {
           return checkSubDirsForJavaFiles(path.join(dir, entry.name));
         }
@@ -169,7 +168,7 @@ async function findStepsDir(dir: string, fs: any): Promise<string | null> {
   for (const entry of entries) {
     if (entry.isDirectory()) {
       const subDir = path.join(dir, entry.name);
-      const result = await findStepsDir(subDir, fs);
+      const result = await findStepsDir(subDir, fsModule);
       if (result) {
         return result;
       }

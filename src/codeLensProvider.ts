@@ -8,7 +8,7 @@ import * as path from 'path';
  * CodeLens provider for Cucumber feature files - with compact buttons
  */
 export class CucumberCodeLensProvider implements vscode.CodeLensProvider {
-  provideCodeLenses(document: vscode.TextDocument, token: vscode.CancellationToken): vscode.CodeLens[] {
+  provideCodeLenses(document: vscode.TextDocument): vscode.CodeLens[] {
     const codeLenses: vscode.CodeLens[] = [];
 
     if (path.extname(document.uri.fsPath) !== '.feature') {
