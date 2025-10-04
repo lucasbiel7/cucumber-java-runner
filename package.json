@@ -150,7 +150,43 @@
         "cucumberJavaRunner.enableCodeLens": {
           "type": "boolean",
           "default": false,
-          "description": "Enable CodeLens buttons in feature files. When disabled, use Test Explorer instead for a cleaner interface."
+          "description": "Enable CodeLens buttons (▶ Run, 🐛 Debug) in feature files. When disabled, use Test Explorer instead for a cleaner interface.",
+          "order": 1
+        },
+        "cucumberJavaRunner.objectFactory": {
+          "type": "string",
+          "default": "",
+          "description": "Custom Cucumber ObjectFactory class (e.g., for Spring, Guice, PicoContainer). Leave empty to use default.",
+          "order": 2,
+          "markdownDescription": "Custom Cucumber `ObjectFactory` class for dependency injection. Common values:\n- Spring: `cucumber.api.spring.SpringFactory`\n- Guice: `cucumber.api.guice.GuiceFactory`\n- PicoContainer: `cucumber.api.picocontainer.PicoFactory`"
+        },
+        "cucumberJavaRunner.showDetailedErrors": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show detailed error messages with stack traces in Test Explorer when scenarios fail.",
+          "order": 3
+        },
+        "cucumberJavaRunner.autoCompileMaven": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically compile Maven projects before running tests (only when target directory is missing).",
+          "order": 4
+        },
+        "cucumberJavaRunner.excludeBuildDirectories": {
+          "type": "array",
+          "default": [
+            "target",
+            "build",
+            "out",
+            "dist",
+            "node_modules",
+            ".git"
+          ],
+          "description": "Directories to exclude when discovering feature files to avoid duplicates.",
+          "order": 5,
+          "items": {
+            "type": "string"
+          }
         }
       }
     }

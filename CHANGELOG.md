@@ -13,10 +13,18 @@ All notable changes to the Cucumber Java Runner extension will be documented in 
 - **Multiple Failure Support**: When multiple scenarios fail, each one shows its specific error with correct location
 - **Precise Line Matching**: Fixed bug where scenarios on lines like 5 and 57 could be confused due to substring matching
 
+#### Enhanced Configuration
+- **Expanded Settings Panel**: Added comprehensive configuration options in VS Code Settings
+- **Better Documentation**: All settings now have detailed descriptions and examples
+- **New Configuration Options**:
+  - `showDetailedErrors`: Toggle detailed error messages (default: true)
+  - `autoCompileMaven`: Control automatic Maven compilation (default: true)
+  - `excludeBuildDirectories`: Customize which directories to exclude when discovering tests
+- **Improved Settings UI**: Settings are now properly ordered and documented with markdown support
+
 #### Technical Improvements
 - Refactored test result processing logic into separate module for better separation of concerns
 - Enhanced scenario-to-test-item matching with exact line number comparison
-- Added comprehensive debug logging for troubleshooting test execution
 - Improved error message formatting with cleaner step name and error display
 
 ### 🐛 Bug Fixes

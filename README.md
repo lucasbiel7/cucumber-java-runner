@@ -131,6 +131,45 @@ You can also right-click on feature files:
 - Right-click in an open feature file → "Cucumber: Run Feature/Scenario/Example"
 - Right-click in an open feature file → "Cucumber: Debug Feature/Scenario/Example"
 
+## ⚙️ Configuration
+
+Access settings via: **Settings → Extensions → Cucumber Java Runner**
+
+| Setting | Type | Default | Description |
+|---------|------|---------|-------------|
+| `enableCodeLens` | boolean | `false` | Enable CodeLens buttons (▶ Run, 🐛 Debug) in feature files. When disabled, use Test Explorer instead for a cleaner interface. |
+| `objectFactory` | string | `""` | Custom Cucumber ObjectFactory class for dependency injection (e.g., Spring, Guice, PicoContainer). Leave empty for default. |
+| `showDetailedErrors` | boolean | `true` | Show detailed error messages with stack traces in Test Explorer when scenarios fail. |
+| `autoCompileMaven` | boolean | `true` | Automatically compile Maven projects before running tests (only when target directory is missing). |
+| `excludeBuildDirectories` | array | `["target", "build", ...]` | Directories to exclude when discovering feature files to avoid duplicates. |
+
+### Examples
+
+**Using Spring Dependency Injection:**
+```json
+{
+  "cucumberJavaRunner.objectFactory": "cucumber.api.spring.SpringFactory"
+}
+```
+
+**Disable auto-compilation:**
+```json
+{
+  "cucumberJavaRunner.autoCompileMaven": false
+}
+```
+
+**Custom excluded directories:**
+```json
+{
+  "cucumberJavaRunner.excludeBuildDirectories": [
+    "target",
+    "build",
+    "generated"
+  ]
+}
+```
+
 ## 🎨 Interface Options
 
 ### Test Explorer (Default) - Recommended
