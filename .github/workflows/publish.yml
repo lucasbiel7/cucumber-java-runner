@@ -25,18 +25,62 @@ jobs:
     - name: Compile TypeScript
       run: npm run compile
 
+    - name: Get version from tag
+      id: get_version
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/v}
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
     - name: Package extension
-      run: npx vsce package
+      run: npx --yes @vscode/vsce@latest package
 
     - name: Publish to VS Code Marketplace
-      run: npx vsce publish -p ${{ secrets.VSCE_TOKEN }}
+      run: npx --yes @vscode/vsce@latest publish -p ${{ secrets.VSCE_TOKEN }}
       continue-on-error: false
+
+    - name: Extract changelog for this version
+      id: changelog
+      run: |
+        chmod +x .github/scripts/extract-changelog.sh
+        CHANGELOG_CONTENT=$(.github/scripts/extract-changelog.sh ${{ steps.get_version.outputs.tag }})
+
+        # Save to file to handle multiline
+        echo "$CHANGELOG_CONTENT" > /tmp/changelog.txt
+
+        # Create release notes with marketplace link
+        cat > /tmp/release-notes.md << 'EOF'
+        ## 📦 Installation
+
+        **Install from VS Code Marketplace:**
+        - [Cucumber Java Runner on Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=lucasbiel7.cucumber-java-runner)
+        - Or search for "Cucumber Java Runner" in VS Code Extensions
+
+        **Install from VSIX:**
+        Download the `.vsix` file below and install via:
+        ```bash
+        code --install-extension cucumber-java-runner-${{ steps.get_version.outputs.version }}.vsix
+        ```
+
+        ---
+
+        ## 📝 What's Changed
+
+        EOF
+
+        cat /tmp/changelog.txt >> /tmp/release-notes.md
+
+        echo 'notes<<EOF' >> $GITHUB_OUTPUT
+        cat /tmp/release-notes.md >> $GITHUB_OUTPUT
+        echo 'EOF' >> $GITHUB_OUTPUT
 
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v1
       with:
         files: '*.vsix'
-        generate_release_notes: true
+        body: ${{ steps.changelog.outputs.notes }}
+        draft: false
+        prerelease: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

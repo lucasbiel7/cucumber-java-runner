@@ -2,6 +2,38 @@
 
 All notable changes to the Cucumber Java Runner extension will be documented in this file.
 
+## [1.0.3] - 2025-10-04
+
+### 🔧 Code Quality & Infrastructure
+
+#### Added
+- **ESLint Configuration**: Added comprehensive ESLint setup with TypeScript support for better code quality
+- **Auto Tag Release Workflow**: New GitHub Actions workflow that automatically creates version tags from package.json
+- **Improved CI Pipeline**: Enhanced continuous integration with Node.js 20.x support
+
+#### Changed
+- **Code Quality Improvements**: Fixed multiple linting issues across the codebase
+  - Removed unused parameters (e.g., `token` in CodeLens provider, `progress` in cucumber runner)
+  - Improved error handling with proper type guards (`unknown` instead of `any`)
+  - Replaced `let` with `const` where appropriate for better immutability
+  - Added explicit type annotations for better type safety
+  - Fixed variable shadowing issues (`fs` renamed to `fsModule`)
+- **Better Error Messages**: Enhanced error handling with proper error message extraction
+- **Cleaner Function Signatures**: Removed unused promise `reject` parameters
+
+#### Fixed
+- ESLint warnings throughout the codebase
+- Type safety issues with error handling
+- Unused variable and parameter warnings
+
+### 🚀 Infrastructure Improvements
+
+- CI workflow now uses Node.js 20.x exclusively
+- Automated tag creation on version updates
+- Streamlined release process with automatic tag management
+
+---
+
 ## [1.0.0] - 2025-01-04
 
 ### 🎉 Major Release
