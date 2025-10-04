@@ -1,11 +1,11 @@
 {
-  "name": "cucumber-java-easy-runner",
-  "displayName": "Cucumber Java Easy Runner",
-  "description": "VS Code extension for easily running Cucumber Feature files in Java projects",
-  "version": "0.0.8",
-  "publisher": "HakkiEtem",
+  "name": "cucumber-java-runner",
+  "displayName": "Cucumber Java Runner",
+  "description": "VS Code extension for running Cucumber Feature files in Java projects",
+  "version": "1.0.0",
+  "publisher": "lucasbiel7",
   "author": {
-    "name": "Hakki Etem"
+    "name": "lucasbiel7"
   },
   "icon": "images/logo.png",
   "engines": {
@@ -13,7 +13,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/hakkietem350/Cucumber-Java-Easy-Runner.git"
+    "url": "https://github.com/lucasbiel7/cucumber-java-runner"
   },
   "categories": [
     "Testing",
@@ -39,31 +39,55 @@
   "contributes": {
     "commands": [
       {
-        "command": "cucumberJavaEasyRunner.runFeature",
+        "command": "cucumberJavaRunner.runFeature",
         "title": "Cucumber: Run Feature"
       },
       {
-        "command": "cucumberJavaEasyRunner.runScenario",
+        "command": "cucumberJavaRunner.runScenario",
         "title": "Cucumber: Run Scenario"
       },
       {
-        "command": "cucumberJavaEasyRunner.runExample",
+        "command": "cucumberJavaRunner.runExample",
         "title": "Cucumber: Run Example"
       },
       {
-        "command": "cucumberJavaEasyRunner.runFeatureCodeLens",
+        "command": "cucumberJavaRunner.debugFeature",
+        "title": "Cucumber: Debug Feature"
+      },
+      {
+        "command": "cucumberJavaRunner.debugScenario",
+        "title": "Cucumber: Debug Scenario"
+      },
+      {
+        "command": "cucumberJavaRunner.debugExample",
+        "title": "Cucumber: Debug Example"
+      },
+      {
+        "command": "cucumberJavaRunner.runFeatureCodeLens",
         "title": "▶ Run Feature"
       },
       {
-        "command": "cucumberJavaEasyRunner.runScenarioCodeLens",
+        "command": "cucumberJavaRunner.runScenarioCodeLens",
         "title": "▶ Run Scenario"
       },
-            {
-        "command": "cucumberJavaEasyRunner.runExampleCodeLens",
+      {
+        "command": "cucumberJavaRunner.runExampleCodeLens",
         "title": "▶ Run Example"
       },
       {
-        "command": "cucumberJavaEasyRunner.refreshTests",
+        "command": "cucumberJavaRunner.debugFeatureCodeLens",
+        "title": "🐛 Debug Feature"
+      },
+      {
+        "command": "cucumberJavaRunner.debugScenarioCodeLens",
+        "title": "🐛 Debug Scenario"
+      },
+      {
+        "command": "cucumberJavaRunner.debugExampleCodeLens",
+        "title": "🐛 Debug Example"
+      },
+      {
+        "command": "cucumberJavaRunner.refreshTests",
         "title": "Refresh Cucumber Tests",
         "icon": "$(refresh)"
       }
@@ -71,32 +95,47 @@
     "menus": {
       "commandPalette": [
         {
-          "command": "cucumberJavaEasyRunner.refreshTests",
+          "command": "cucumberJavaRunner.refreshTests",
           "when": "true"
         }
       ],
       "explorer/context": [
         {
           "when": "resourceExtname == .feature",
-          "command": "cucumberJavaEasyRunner.runFeature",
+          "command": "cucumberJavaRunner.runFeature",
           "group": "navigation"
         }
       ],
       "editor/context": [
         {
           "when": "resourceExtname == .feature",
-          "command": "cucumberJavaEasyRunner.runFeature",
+          "command": "cucumberJavaRunner.runFeature",
           "group": "1_cucumber@1"
         },
         {
           "when": "resourceExtname == .feature",
-          "command": "cucumberJavaEasyRunner.runScenario",
+          "command": "cucumberJavaRunner.runScenario",
           "group": "1_cucumber@2"
         },
         {
           "when": "resourceExtname == .feature",
-          "command": "cucumberJavaEasyRunner.runExample",
+          "command": "cucumberJavaRunner.runExample",
           "group": "1_cucumber@3"
+        },
+        {
+          "when": "resourceExtname == .feature",
+          "command": "cucumberJavaRunner.debugFeature",
+          "group": "1_cucumber@4"
+        },
+        {
+          "when": "resourceExtname == .feature",
+          "command": "cucumberJavaRunner.debugScenario",
+          "group": "1_cucumber@5"
+        },
+        {
+          "when": "resourceExtname == .feature",
+          "command": "cucumberJavaRunner.debugExample",
+          "group": "1_cucumber@6"
         }
       ]
     },
@@ -110,9 +149,9 @@
     ],
 
     "configuration": {
-      "title": "Cucumber Java Easy Runner",
+      "title": "Cucumber Java Runner",
       "properties": {
-        "cucumberJavaEasyRunner.enableCodeLens": {
+        "cucumberJavaRunner.enableCodeLens": {
           "type": "boolean",
           "default": false,
           "description": "Enable CodeLens buttons in feature files. When disabled, use Test Explorer instead for a cleaner interface."
@@ -126,7 +165,10 @@
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
-    "test": "node ./out/test/runTest.js"
+    "test": "node ./out/test/runTest.js",
+    "package": "vsce package",
+    "install-local": "npm run package && cursor --install-extension $(ls -t cucumber-java-runner-*.vsix | head -1)",
+    "build-and-install": "npm run compile && npm run install-local"
   },
   "devDependencies": {
     "@types/vscode": "^1.93.1",

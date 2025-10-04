@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="cucumberGradient" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#23B14D;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#008A2E;stop-opacity:1" />
+    </radialGradient>
+
+    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="2"/>
+      <feOffset dx="1" dy="2" result="offsetblur"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.3"/>
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Cucumber - Maior, principal -->
+  <g transform="translate(50, 50)" filter="url(#shadow)">
+    <!-- Corpo do Cucumber -->
+    <circle cx="0" cy="0" r="42" fill="url(#cucumberGradient)"/>
+
+    <!-- Padrão de sementes (8 pétalas) -->
+    <g fill="#FFFFFF" opacity="0.9">
+      <ellipse cx="0" cy="-15" rx="7" ry="11"/>
+      <ellipse cx="11" cy="-11" rx="7" ry="11" transform="rotate(45 11 -11)"/>
+      <ellipse cx="15" cy="0" rx="7" ry="11" transform="rotate(90 15 0)"/>
+      <ellipse cx="11" cy="11" rx="7" ry="11" transform="rotate(135 11 11)"/>
+      <ellipse cx="0" cy="15" rx="7" ry="11" transform="rotate(180 0 15)"/>
+      <ellipse cx="-11" cy="11" rx="7" ry="11" transform="rotate(225 -11 11)"/>
+      <ellipse cx="-15" cy="0" rx="7" ry="11" transform="rotate(270 -15 0)"/>
+      <ellipse cx="-11" cy="-11" rx="7" ry="11" transform="rotate(315 -11 -11)"/>
+    </g>
+
+    <!-- Círculo central branco -->
+    <circle cx="0" cy="0" r="5" fill="#FFFFFF" opacity="0.8"/>
+
+    <!-- Ponta do Cucumber -->
+    <path d="M -3 38 Q -2 44 0 48 Q 2 44 3 38" fill="#008A2E"/>
+  </g>
+
+  <!-- Logo Java - Menor, à direita, sobreposto -->
+  <g transform="translate(90, 85)">
+    <!-- Fundo branco com borda -->
+    <circle cx="0" cy="0" r="24" fill="white" stroke="#E0E0E0" stroke-width="1.5"/>
+
+    <!-- Xícara de café (azul) -->
+    <g transform="scale(0.35)">
+      <path d="M -15 -8 C -15 -10 -13 -12 -10 -12 L 10 -12 C 13 -12 15 -10 15 -8 L 12 15 C 12 18 10 20 7 20 L -7 20 C -10 20 -12 18 -12 15 Z"
+            fill="#5382A1" stroke="#5382A1" stroke-width="1"/>
+
+      <!-- Ondas na xícara -->
+      <path d="M -8 -2 C -6 -4 -2 -4 0 -2 C 2 -4 6 -4 8 -2"
+            stroke="#FFFFFF" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.6"/>
+      <path d="M -8 3 C -6 1 -2 1 0 3 C 2 1 6 1 8 3"
+            stroke="#FFFFFF" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.6"/>
+    </g>
+
+    <!-- Vapor (vermelho) -->
+    <g transform="scale(0.35)">
+      <path d="M -8 -18 Q -10 -24 -8 -28" stroke="#E76F51" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <path d="M 0 -18 Q -2 -24 0 -28" stroke="#E76F51" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <path d="M 8 -18 Q 6 -24 8 -28" stroke="#E76F51" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    </g>
+
+    <!-- Texto "JAVA" -->
+    <text x="0" y="18"
+          font-family="Arial, sans-serif"
+          font-size="10"
+          font-weight="bold"
+          fill="#E76F51"
+          text-anchor="middle">JAVA</text>
+  </g>
+</svg>

@@ -1,6 +1,4 @@
-# Cucumber Java Easy Runner
-
-![Cucumber Java Easy Runner](https://raw.githubusercontent.com/hakkietem350/Cucumber-Java-Easy-Runner/main/images/logo.png)
+# Cucumber Java Runner
 
 A VS Code extension that seamlessly integrates Cucumber feature files with VS Code's Test Explorer. Run your Java Cucumber tests directly from the test panel with a clean, modern interface.
 
@@ -180,5 +178,5 @@ Found a bug or have a feature request? Please report it on [GitHub Issues](https
 
 ---
 
-**Developer**: Hakki Etem  
-**Repository**: [GitHub](https://github.com/hakkietem350/Cucumber-Java-Easy-Runner) 
+**Developer**: Hakki Etem
+**Repository**: [GitHub](https://github.com/hakkietem350/Cucumber-Java-Easy-Runner)
