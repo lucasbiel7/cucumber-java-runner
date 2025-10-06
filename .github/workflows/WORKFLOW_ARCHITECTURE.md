@@ -63,16 +63,15 @@ The publish workflow has been redesigned with **resilience** and **parallel exec
 - ✅ Skips publication if version already exists
 - ✅ Prevents "duplicate version" errors on retry
 
-**Retry Configuration**:
-- ✅ **Max attempts**: 3
-- ✅ **Timeout**: 5 minutes per attempt
-- ✅ **Wait between retries**: 30 seconds
-- ✅ **Action**: `nick-fields/retry-action@v3`
+**Timeout Configuration**:
+- ✅ **Timeout**: 10 minutes per publication
+- ✅ **Manual retry**: Safe to re-run workflow from GitHub Actions UI
 
-**Why Retry?**:
-- Network issues
-- Marketplace API temporary unavailability
-- Rate limiting
+**Why Manual Retry Works Well**:
+- Version check prevents duplicate errors
+- Idempotent operations (safe to re-run)
+- Clear failure visibility in GitHub Actions
+- Simple re-run button in UI
 
 ---
 
@@ -93,16 +92,15 @@ The publish workflow has been redesigned with **resilience** and **parallel exec
 - ✅ Handles first-time publication (extension not yet on registry)
 - ✅ Prevents "duplicate version" errors on retry
 
-**Retry Configuration**:
-- ✅ **Max attempts**: 3
-- ✅ **Timeout**: 5 minutes per attempt
-- ✅ **Wait between retries**: 30 seconds
-- ✅ **Action**: `nick-fields/retry-action@v3`
+**Timeout Configuration**:
+- ✅ **Timeout**: 10 minutes per publication
+- ✅ **Manual retry**: Safe to re-run workflow from GitHub Actions UI
 
-**Why Retry?**:
-- Network issues
-- Open VSX API temporary unavailability
-- First-time namespace creation delays
+**Why Manual Retry Works Well**:
+- Version check prevents duplicate errors
+- Handles first-time publication (extension not yet on registry)
+- Idempotent operations (safe to re-run)
+- Clear failure visibility in GitHub Actions
 
 **Note**: Jobs 2 and 3 run **in parallel** for faster execution!
 
@@ -133,8 +131,9 @@ The publish workflow has been redesigned with **resilience** and **parallel exec
 ### 1. **Resilience**
 - ✅ If VS Code Marketplace fails, Open VSX still publishes
 - ✅ If Open VSX fails, VS Code Marketplace still publishes
-- ✅ Automatic retry (3 attempts) for transient failures
+- ✅ Safe manual retry from GitHub Actions UI (idempotent operations)
 - ✅ Clear failure isolation - easy to identify which marketplace failed
+- ✅ 10-minute timeout per marketplace for better reliability
 
 ### 2. **Performance**
 - ✅ **Parallel execution**: Both marketplaces publish simultaneously
@@ -148,9 +147,9 @@ The publish workflow has been redesigned with **resilience** and **parallel exec
 - ✅ **Artifact reuse**: Build once, publish many times
 
 ### 4. **Reliability**
-- ✅ **Timeout protection**: Each publish attempt has a 5-minute timeout
-- ✅ **Exponential backoff**: 30 seconds wait between retries
-- ✅ **Graceful degradation**: Release still created even if one marketplace fails
+- ✅ **Timeout protection**: Each publish attempt has a 10-minute timeout
+- ✅ **Manual retry support**: Safe to re-run workflow from GitHub Actions UI
+- ✅ **Graceful degradation**: At least one marketplace publishes even if the other fails
 - ✅ **Idempotent operations**: Safe to retry - checks if version already published
 - ✅ **No duplicate errors**: Skips publication if version already exists on marketplace
 
@@ -169,17 +168,27 @@ The publish workflow has been redesigned with **resilience** and **parallel exec
 Total time: ~3-4 minutes
 ```
 
-### Scenario 2: One Marketplace Fails (with retry) ⚠️
+### Scenario 2: One Marketplace Fails (Manual Retry) ⚠️→✅
 ```
+First run:
 1. build (2-3 min)
    ↓
-2. publish-vscode (30s) ║ 3. publish-openvsx (FAIL → RETRY → SUCCESS)
-   ↓                    ║    ↓ (1.5 min with retries)
+2. publish-vscode (SUCCESS) ║ 3. publish-openvsx (FAIL - network issue)
+   ↓ (30s)                   ║    ↓ (timeout)
+   └───────────────────────┴────┘
+                ↓
+4. create-release (BLOCKED)
+
+Manual re-run from GitHub Actions UI:
+1. build (2-3 min)
+   ↓
+2. vscode (CHECK → SKIP) ║ 3. openvsx (CHECK → PUBLISH → SUCCESS)
+   ↓ (10s)               ║    ↓ (30s)
    └────────────────────┴────┘
                 ↓
-4. create-release (30s)
+4. release (30s)                ✅
 
-Total time: ~4-5 minutes (still faster than sequential!)
+Result: Both published successfully with manual retry!
 ```
 
 ### Scenario 3: Version Already Published (Idempotent Retry) ✅
@@ -212,18 +221,21 @@ Action: Manual investigation needed for Open VSX
 
 ## 🔧 Configuration
 
-### Retry Settings
-You can adjust retry behavior in each publish job:
+### Timeout Settings
+You can adjust timeout for each publish job:
 
 ```yaml
 - name: Publish to [Marketplace]
-  uses: nick-fields/retry-action@v3
-  with:
-    timeout_minutes: 5          # Max time per attempt
-    max_attempts: 3             # Number of retry attempts
-    retry_wait_seconds: 30      # Wait time between retries
-    command: npx ...            # Publish command
+  run: npx ... publish
+  timeout-minutes: 10          # Max time for publication
 ```
+
+### Manual Retry
+If a publication fails:
+1. Go to GitHub Actions → Failed workflow run
+2. Click "Re-run failed jobs" or "Re-run all jobs"
+3. Version check ensures no duplicate errors
+4. Only failed marketplace will publish (successful one skips)
 
 ### Making Release Optional
 If you want the release to be created even if one marketplace fails, change:

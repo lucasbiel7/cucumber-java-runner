@@ -88,12 +88,8 @@ jobs:
 
     - name: Publish to VS Code Marketplace
       if: steps.check_vscode.outputs.already_published != 'true'
-      uses: nick-fields/retry-action@v3
-      with:
-        timeout_minutes: 5
-        max_attempts: 3
-        retry_wait_seconds: 30
-        command: npx --yes @vscode/vsce@latest publish -p ${{ secrets.VSCE_TOKEN }} --packagePath *.vsix
+      run: npx --yes @vscode/vsce@latest publish -p ${{ secrets.VSCE_TOKEN }} --packagePath *.vsix
+      timeout-minutes: 10
 
     - name: Skip publishing (already published)
       if: steps.check_vscode.outputs.already_published == 'true'
@@ -137,12 +133,8 @@ jobs:
 
     - name: Publish to Open VSX Registry
       if: steps.check_openvsx.outputs.already_published != 'true'
-      uses: nick-fields/retry-action@v3
-      with:
-        timeout_minutes: 5
-        max_attempts: 3
-        retry_wait_seconds: 30
-        command: npx --yes ovsx@latest publish -p ${{ secrets.VSX_TOKEN }} *.vsix
+      run: npx --yes ovsx@latest publish -p ${{ secrets.VSX_TOKEN }} *.vsix
+      timeout-minutes: 10
 
     - name: Skip publishing (already published)
       if: steps.check_openvsx.outputs.already_published == 'true'

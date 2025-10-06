@@ -14,11 +14,10 @@ This release focuses on making the publishing workflow more **resilient**, **rel
   - `publish-vscode`: Publish to VS Code Marketplace (runs in parallel)
   - `publish-openvsx`: Publish to Open VSX Registry (runs in parallel)
   - `create-release`: Create GitHub release after both publications succeed
-- **Automatic Retry Logic**: Each marketplace publication retries up to 3 times on failure
-  - 5-minute timeout per attempt
-  - 30-second wait between retries
-  - Handles transient network issues and API unavailability
-  - ~90% reduction in transient failures
+- **Manual Retry Support**: Workflow can be safely re-run manually if publication fails
+  - 10-minute timeout per marketplace
+  - Version check prevents duplicate publication errors
+  - Idempotent operations make manual retry safe and easy
 - **Version Conflict Prevention**: Checks if version already exists before publishing
   - Queries VS Code Marketplace API to verify current published version
   - Queries Open VSX Registry API to verify current published version
@@ -32,7 +31,7 @@ This release focuses on making the publishing workflow more **resilient**, **rel
 #### Performance Improvements
 - **~40% Faster Execution**: Parallel publishing reduces total time from 4-6 minutes to 3-4 minutes
 - **Artifact Reuse**: Extension built once and reused by both publishers (no redundant compilation)
-- **Smart Retry**: Only retries actual failures, not successful publications
+- **Longer Timeout**: 10-minute timeout per marketplace for better reliability
 
 #### Documentation
 - Added comprehensive workflow architecture documentation (`.github/workflows/WORKFLOW_ARCHITECTURE.md`)
@@ -40,7 +39,7 @@ This release focuses on making the publishing workflow more **resilient**, **rel
 - Documented all execution scenarios and troubleshooting steps
 
 ### 🎯 Impact
-This release significantly improves the reliability and efficiency of the extension publishing process, ensuring users get updates faster and more consistently across all platforms.
+This release significantly improves the reliability and efficiency of the extension publishing process. The idempotent version checking makes manual retries safe and easy, while parallel execution ensures users get updates faster across all platforms.
 
 ---
 
