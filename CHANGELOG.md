@@ -2,6 +2,42 @@
 
 All notable changes to the Cucumber Java Runner extension will be documented in this file.
 
+## [1.0.7] - 2025-10-06
+
+### 🚀 Distribution & Availability
+
+#### Added
+- **Open VSX Registry Support**: Extension is now published to Open VSX Registry, making it available in:
+  - ✅ **Cursor** - Full support for Cursor IDE users
+  - ✅ **VSCodium** - Open-source VS Code alternative
+  - ✅ **Eclipse Theia** - Cloud and desktop IDE platform
+  - ✅ **Gitpod** - Cloud development environment
+  - ✅ Other VS Code-based editors that use Open VSX
+- **Automated Dual Publishing**: GitHub Actions workflow now automatically publishes to both:
+  - VS Code Marketplace (Microsoft)
+  - Open VSX Registry (Eclipse Foundation)
+- **Enhanced Installation Documentation**: Updated README with specific installation instructions for different editors
+
+#### Changed
+- **Improved Badges**: Added Open VSX version and download badges to README
+- **Expanded Installation Section**: README now includes separate instructions for VS Code and Cursor/VSCodium users
+- **Release Notes Enhancement**: GitHub releases now include Open VSX Registry links
+
+### 📝 Documentation
+- Added comprehensive Open VSX setup guide (`OPEN_VSX_SETUP.md`)
+- Updated README with Open VSX badges and installation links
+- Enhanced release notes template to include both marketplaces
+
+### 🔧 Technical Improvements
+- Workflow now uses `ovsx` CLI tool for Open VSX publishing
+- Added `VSX_TOKEN` secret support in GitHub Actions
+- Maintained backward compatibility with existing VS Code Marketplace publishing
+
+### 🎯 Impact
+This release significantly expands the extension's reach, making it accessible to users of alternative VS Code-based editors, particularly **Cursor**, which has been gaining popularity in the development community.
+
+---
+
 ## [1.0.6] - 2025-10-04
 
 ### ✨ Features & Improvements

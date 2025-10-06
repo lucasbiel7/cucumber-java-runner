@@ -4,8 +4,10 @@ A powerful VS Code extension that seamlessly integrates Cucumber feature files w
 
 [![CI](https://github.com/lucasbiel7/cucumber-java-runner/actions/workflows/ci.yml/badge.svg)](https://github.com/lucasbiel7/cucumber-java-runner/actions/workflows/ci.yml)
 [![Publish](https://github.com/lucasbiel7/cucumber-java-runner/actions/workflows/publish.yml/badge.svg)](https://github.com/lucasbiel7/cucumber-java-runner/actions/workflows/publish.yml)
-[![Version](https://img.shields.io/visual-studio-marketplace/v/lucasbiel7.cucumber-java-runner)](https://marketplace.visualstudio.com/items?itemName=lucasbiel7.cucumber-java-runner)
-[![Downloads](https://img.shields.io/visual-studio-marketplace/d/lucasbiel7.cucumber-java-runner)](https://marketplace.visualstudio.com/items?itemName=lucasbiel7.cucumber-java-runner)
+[![VS Code Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/lucasbiel7.cucumber-java-runner?label=VS%20Code%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=lucasbiel7.cucumber-java-runner)
+[![VS Code Marketplace Downloads](https://img.shields.io/visual-studio-marketplace/d/lucasbiel7.cucumber-java-runner)](https://marketplace.visualstudio.com/items?itemName=lucasbiel7.cucumber-java-runner)
+[![Open VSX Version](https://img.shields.io/open-vsx/v/lucasbiel7/cucumber-java-runner?label=Open%20VSX)](https://open-vsx.org/extension/lucasbiel7/cucumber-java-runner)
+[![Open VSX Downloads](https://img.shields.io/open-vsx/dt/lucasbiel7/cucumber-java-runner)](https://open-vsx.org/extension/lucasbiel7/cucumber-java-runner)
 [![License](https://img.shields.io/github/license/lucasbiel7/cucumber-java-runner)](https://github.com/lucasbiel7/cucumber-java-runner/blob/main/LICENSE)
 
 ## ✨ What's New in This Fork
@@ -14,6 +16,9 @@ This is an enhanced version of the original [Cucumber Java Easy Runner](https://
 
 ### 🚀 Major Enhancements
 
+- **🌐 Multi-Platform Availability (v1.0.7+)**: Now available on both VS Code Marketplace AND Open VSX Registry
+  - ✅ Full support for **Cursor**, **VSCodium**, **Eclipse Theia**, **Gitpod**, and other VS Code-based editors
+  - ✅ Automated dual publishing to both marketplaces
 - **✅ Real Test Results**: Tests are now marked as passed ✅ or failed ❌ based on actual Cucumber execution results (not just "always passed")
 - **📊 Individual Scenario Results**: When running entire features, each scenario is marked individually with its real result
 - **📍 Precise Error Location**: Error markers appear on the exact line of the failed step, making debugging instant
@@ -233,11 +238,23 @@ Use this when you have step definitions in external libraries or modules:
 
 ## 📦 Installation
 
-### From VS Code Marketplace
-1. Open VS Code or Cursor
+### From Extension Marketplaces
+
+#### VS Code
+1. Open VS Code
 2. Go to Extensions view (`Ctrl+Shift+X`)
 3. Search for "Cucumber Java Runner"
 4. Click Install
+
+Or install directly from [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=lucasbiel7.cucumber-java-runner)
+
+#### Cursor, VSCodium, and Other VS Code-based Editors
+1. Open your editor
+2. Go to Extensions view (`Ctrl+Shift+X`)
+3. Search for "Cucumber Java Runner"
+4. Click Install
+
+Or install directly from [Open VSX Registry](https://open-vsx.org/extension/lucasbiel7/cucumber-java-runner)
 
 ### Manual Installation
 1. Download the `.vsix` file from [Releases](https://github.com/lucasbiel7/cucumber-java-runner/releases)

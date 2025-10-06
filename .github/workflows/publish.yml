@@ -39,6 +39,10 @@ jobs:
       run: npx --yes @vscode/vsce@latest publish -p ${{ secrets.VSCE_TOKEN }}
       continue-on-error: false
 
+    - name: Publish to Open VSX Registry
+      run: npx --yes ovsx@latest publish -p ${{ secrets.VSX_TOKEN }}
+      continue-on-error: false
+
     - name: Extract changelog for this version
       id: changelog
       run: |
@@ -55,6 +59,10 @@ jobs:
         **Install from VS Code Marketplace:**
         - [Cucumber Java Runner on Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=lucasbiel7.cucumber-java-runner)
         - Or search for "Cucumber Java Runner" in VS Code Extensions
+
+        **Install from Open VSX Registry (for Cursor, VSCodium, etc.):**
+        - [Cucumber Java Runner on Open VSX](https://open-vsx.org/extension/lucasbiel7/cucumber-java-runner)
+        - Or search for "Cucumber Java Runner" in your editor's extension marketplace
 
         **Install from VSIX:**
         Download the `.vsix` file below and install via:
