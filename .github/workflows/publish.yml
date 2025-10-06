@@ -6,8 +6,13 @@ on:
       - 'v*'  # Triggers on version tags like v1.0.0, v1.0.1, etc.
 
 jobs:
-  publish:
+  build:
+    name: Build Extension
     runs-on: ubuntu-latest
+
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+      tag: ${{ steps.get_version.outputs.tag }}
 
     steps:
     - name: Checkout code
@@ -35,19 +40,135 @@ jobs:
     - name: Package extension
       run: npx --yes @vscode/vsce@latest package
 
+    - name: Upload VSIX artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: extension-vsix
+        path: '*.vsix'
+        retention-days: 90
+
+  publish-vscode:
+    name: Publish to VS Code Marketplace
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Download VSIX artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: extension-vsix
+
+    - name: Check if version exists on VS Code Marketplace
+      id: check_vscode
+      continue-on-error: true
+      run: |
+        RESPONSE=$(curl -s "https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery" \
+          -H "Content-Type: application/json" \
+          -H "Accept: application/json;api-version=3.0-preview.1" \
+          -d '{
+            "filters": [{
+              "criteria": [
+                {"filterType": 7, "value": "lucasbiel7.cucumber-java-runner"}
+              ]
+            }],
+            "flags": 914
+          }')
+
+        PUBLISHED_VERSION=$(echo "$RESPONSE" | jq -r '.results[0].extensions[0].versions[0].version // "none"')
+        echo "published_version=$PUBLISHED_VERSION" >> $GITHUB_OUTPUT
+        echo "target_version=${{ needs.build.outputs.version }}" >> $GITHUB_OUTPUT
+
+        if [ "$PUBLISHED_VERSION" = "${{ needs.build.outputs.version }}" ]; then
+          echo "Version ${{ needs.build.outputs.version }} already published on VS Code Marketplace"
+          echo "already_published=true" >> $GITHUB_OUTPUT
+        else
+          echo "Version ${{ needs.build.outputs.version }} not yet published (current: $PUBLISHED_VERSION)"
+          echo "already_published=false" >> $GITHUB_OUTPUT
+        fi
+
     - name: Publish to VS Code Marketplace
-      run: npx --yes @vscode/vsce@latest publish -p ${{ secrets.VSCE_TOKEN }}
-      continue-on-error: false
+      if: steps.check_vscode.outputs.already_published != 'true'
+      uses: nick-fields/retry-action@v3
+      with:
+        timeout_minutes: 5
+        max_attempts: 3
+        retry_wait_seconds: 30
+        command: npx --yes @vscode/vsce@latest publish -p ${{ secrets.VSCE_TOKEN }} --packagePath *.vsix
+
+    - name: Skip publishing (already published)
+      if: steps.check_vscode.outputs.already_published == 'true'
+      run: |
+        echo "✅ Version ${{ needs.build.outputs.version }} is already published on VS Code Marketplace"
+        echo "Skipping publication to avoid duplicate version error"
+
+  publish-openvsx:
+    name: Publish to Open VSX Registry
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Download VSIX artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: extension-vsix
+
+    - name: Check if version exists on Open VSX
+      id: check_openvsx
+      continue-on-error: true
+      run: |
+        RESPONSE=$(curl -s "https://open-vsx.org/api/lucasbiel7/cucumber-java-runner")
+
+        if echo "$RESPONSE" | jq -e '.error' > /dev/null 2>&1; then
+          echo "Extension not found on Open VSX (first publish)"
+          echo "already_published=false" >> $GITHUB_OUTPUT
+        else
+          PUBLISHED_VERSION=$(echo "$RESPONSE" | jq -r '.version // "none"')
+          echo "published_version=$PUBLISHED_VERSION" >> $GITHUB_OUTPUT
+          echo "target_version=${{ needs.build.outputs.version }}" >> $GITHUB_OUTPUT
+
+          if [ "$PUBLISHED_VERSION" = "${{ needs.build.outputs.version }}" ]; then
+            echo "Version ${{ needs.build.outputs.version }} already published on Open VSX"
+            echo "already_published=true" >> $GITHUB_OUTPUT
+          else
+            echo "Version ${{ needs.build.outputs.version }} not yet published (current: $PUBLISHED_VERSION)"
+            echo "already_published=false" >> $GITHUB_OUTPUT
+          fi
+        fi
 
     - name: Publish to Open VSX Registry
-      run: npx --yes ovsx@latest publish -p ${{ secrets.VSX_TOKEN }}
-      continue-on-error: false
+      if: steps.check_openvsx.outputs.already_published != 'true'
+      uses: nick-fields/retry-action@v3
+      with:
+        timeout_minutes: 5
+        max_attempts: 3
+        retry_wait_seconds: 30
+        command: npx --yes ovsx@latest publish -p ${{ secrets.VSX_TOKEN }} *.vsix
+
+    - name: Skip publishing (already published)
+      if: steps.check_openvsx.outputs.already_published == 'true'
+      run: |
+        echo "✅ Version ${{ needs.build.outputs.version }} is already published on Open VSX Registry"
+        echo "Skipping publication to avoid duplicate version error"
+
+  create-release:
+    name: Create GitHub Release
+    needs: [build, publish-vscode, publish-openvsx]
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download VSIX artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: extension-vsix
 
     - name: Extract changelog for this version
       id: changelog
       run: |
         chmod +x .github/scripts/extract-changelog.sh
-        CHANGELOG_CONTENT=$(.github/scripts/extract-changelog.sh ${{ steps.get_version.outputs.tag }})
+        CHANGELOG_CONTENT=$(.github/scripts/extract-changelog.sh ${{ needs.build.outputs.tag }})
 
         # Save to file to handle multiline
         echo "$CHANGELOG_CONTENT" > /tmp/changelog.txt
@@ -67,7 +188,7 @@ jobs:
         **Install from VSIX:**
         Download the `.vsix` file below and install via:
         ```bash
-        code --install-extension cucumber-java-runner-${{ steps.get_version.outputs.version }}.vsix
+        code --install-extension cucumber-java-runner-${{ needs.build.outputs.version }}.vsix
         ```
 
         ---
@@ -91,10 +212,3 @@ jobs:
         prerelease: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Upload VSIX to Release
-      uses: actions/upload-artifact@v4
-      with:
-        name: extension-vsix
-        path: '*.vsix'
-        retention-days: 90
