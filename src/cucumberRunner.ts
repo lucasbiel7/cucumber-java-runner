@@ -230,20 +230,18 @@ async function runWithVSCode(
 
   // Wait for session to end and then read the result file
   return await new Promise<TestExecutionResult>((resolve) => {
-    const disposable = vscode.debug.onDidTerminateDebugSession(session => {
+    const disposable = vscode.debug.onDidTerminateDebugSession(async (session) => {
       if (session.name === configName) {
         disposable.dispose();
 
-        // Give a small delay to ensure file is written
-        setTimeout(() => {
-          const testPassed = checkCucumberResults(resultFile);
+        // Wait for file to be completely written and parse results
+        const testPassed = await checkCucumberResults(resultFile);
 
-          // Return result with file path (don't clean up yet - testController might need it)
-          resolve({
-            passed: testPassed,
-            resultFile: resultFile
-          });
-        }, 500);
+        // Return result with file path (don't clean up yet - testController might need it)
+        resolve({
+          passed: testPassed,
+          resultFile: resultFile
+        });
       }
     });
 
@@ -257,15 +255,80 @@ async function runWithVSCode(
 }
 
 /**
+ * Waits for a file to be completely written and contain valid JSON
+ * @param filePath Path to the file
+ * @param maxAttempts Maximum number of attempts (default: 20)
+ * @param delayMs Delay between attempts in milliseconds (default: 500)
+ * @returns true if file is valid, false otherwise
+ */
+async function waitForValidJsonFile(filePath: string, maxAttempts = 20, delayMs = 500): Promise<boolean> {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      // Check if file exists
+      if (!fs.existsSync(filePath)) {
+        console.log(`Attempt ${attempt}/${maxAttempts}: File does not exist yet: ${filePath}`);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+        continue;
+      }
+
+      // Check if file has content
+      const stats = fs.statSync(filePath);
+      if (stats.size === 0) {
+        console.log(`Attempt ${attempt}/${maxAttempts}: File is empty: ${filePath}`);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+        continue;
+      }
+
+      // Try to read and parse JSON
+      const fileContent = fs.readFileSync(filePath, 'utf-8');
+
+      // Check if content is not just whitespace
+      if (fileContent.trim().length === 0) {
+        console.log(`Attempt ${attempt}/${maxAttempts}: File contains only whitespace`);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+        continue;
+      }
+
+      // Try to parse JSON
+      const jsonData = JSON.parse(fileContent);
+
+      // Validate that it's an array (Cucumber JSON format)
+      if (!Array.isArray(jsonData)) {
+        console.log(`Attempt ${attempt}/${maxAttempts}: JSON is not an array`);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+        continue;
+      }
+
+      // If we got here, file is valid
+      console.log(`File is valid JSON after ${attempt} attempt(s)`);
+      return true;
+
+    } catch (error) {
+      // JSON parse error or read error - file might still be being written
+      console.log(`Attempt ${attempt}/${maxAttempts}: Error reading/parsing file - ${error instanceof Error ? error.message : 'Unknown error'}`);
+
+      if (attempt < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      }
+    }
+  }
+
+  console.error(`Failed to get valid JSON file after ${maxAttempts} attempts`);
+  return false;
+}
+
+/**
  * Checks Cucumber JSON result file to determine if tests passed
  * @param resultFile Path to the JSON result file
  * @returns true if all tests passed, false otherwise
  */
-function checkCucumberResults(resultFile: string): boolean {
+async function checkCucumberResults(resultFile: string): Promise<boolean> {
   try {
-    // Check if result file exists
-    if (!fs.existsSync(resultFile)) {
-      console.error(`Result file not found: ${resultFile}`);
+    // Wait for the file to be completely written with valid JSON
+    const isValid = await waitForValidJsonFile(resultFile);
+
+    if (!isValid) {
+      console.error(`Result file is not valid or was not created: ${resultFile}`);
       return false;
     }
 
@@ -280,23 +343,38 @@ function checkCucumberResults(resultFile: string): boolean {
     let passedScenarios = 0;
     let failedScenarios = 0;
 
+    // Validate results is an array
+    if (!Array.isArray(results)) {
+      console.error('Results is not an array');
+      return false;
+    }
+
     for (const feature of results) {
-      if (feature.elements) {
+      // Safely check if elements exists
+      if (feature && Array.isArray(feature.elements)) {
         for (const scenario of feature.elements) {
           totalScenarios++;
 
           // Check if all steps in the scenario passed
+          // A scenario only passes if ALL steps have status 'passed'
           let scenarioPassed = true;
-          if (scenario.steps) {
+          let hasSteps = false;
+
+          if (Array.isArray(scenario.steps) && scenario.steps.length > 0) {
+            hasSteps = true;
             for (const step of scenario.steps) {
-              if (step.result && step.result.status !== 'passed' && step.result.status !== 'skipped') {
+              // If step has no result or status is not 'passed', scenario failed
+              if (!step.result || step.result.status !== 'passed') {
                 scenarioPassed = false;
                 break;
               }
             }
+          } else {
+            // Scenario without steps is considered failed
+            scenarioPassed = false;
           }
 
-          if (scenarioPassed) {
+          if (scenarioPassed && hasSteps) {
             passedScenarios++;
           } else {
             failedScenarios++;

@@ -252,7 +252,7 @@ export class CucumberTestController {
       const hasChildren = !lineNumber && testItem.children.size > 0 && result.resultFile;
 
       if (hasChildren && result.resultFile) {
-        markChildrenFromResults(testItem, run, result.resultFile);
+        await markChildrenFromResults(testItem, run, result.resultFile);
         // When children are marked individually, just mark parent based on overall result
         if (result.passed) {
           run.passed(testItem);
@@ -265,7 +265,7 @@ export class CucumberTestController {
       } else if (result.resultFile) {
         // For direct test execution (scenario or feature without children structure)
         // Get detailed error messages from result file
-        const errorMessages = getTestErrorMessages(result.resultFile, uri);
+        const errorMessages = await getTestErrorMessages(result.resultFile, uri);
         if (errorMessages.length > 0) {
           // Pass all error messages to show all failed scenarios
           run.failed(testItem, errorMessages);

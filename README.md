@@ -16,6 +16,12 @@ This is an enhanced version of the original [Cucumber Java Easy Runner](https://
 
 ### 🚀 Major Enhancements
 
+- **🛡️ Rock-Solid Reliability (v1.0.9)**: Fixed critical race conditions and improved error handling
+  - ✅ **No more crashes**: Robust file validation prevents reading incomplete result files
+  - ✅ **Accurate results**: Fixed logic that incorrectly marked failed tests as passed
+  - ✅ **Smart error detection**: Detects errors in @Before/@After hooks and scenario setup
+  - ✅ **Clear error messages**: Shows exactly what failed (hook, setup, or specific step)
+  - ✅ **Correct error location**: Points to scenario line for setup errors, step line for step failures
 - **🌐 Multi-Platform Availability (v1.0.7+)**: Now available on both VS Code Marketplace AND Open VSX Registry
   - ✅ Full support for **Cursor**, **VSCodium**, **Eclipse Theia**, **Gitpod**, and other VS Code-based editors
   - ✅ Automated dual publishing to both marketplaces
@@ -33,13 +39,16 @@ This is an enhanced version of the original [Cucumber Java Easy Runner](https://
 
 ### 🔍 Technical Improvements
 
-1. **Unified Test Execution**: Single `runCucumberTest()` function handles both run and debug modes
-2. **Result File Analysis**: Uses `--plugin json:${resultFile}` to capture detailed test results
-3. **Dedicated Result Processor**: New `resultProcessor.ts` module handles all test result parsing and marking
-4. **Precise Line Matching**: Exact numeric comparison prevents false positives (e.g., line 5 vs line 57)
-5. **Smart Compilation**: Maven compilation only runs when needed (checks for `target` directory)
-6. **Consolidated Methods**: Merged duplicate methods (`runTests`/`debugTests`, `runSingleTest`/`debugSingleTest`)
-7. **DRY Principles**: Eliminated code repetition throughout the codebase
+1. **Robust File Processing (v1.0.9)**: Async result processing with retry mechanism and comprehensive validation
+2. **Accurate Test Status (v1.0.9)**: Correct pass/fail logic - only passes if ALL steps are 'passed'
+3. **Hook Error Detection (v1.0.9)**: Detects and reports errors in @Before/@After hooks
+4. **Unified Test Execution**: Single `runCucumberTest()` function handles both run and debug modes
+5. **Result File Analysis**: Uses `--plugin json:${resultFile}` to capture detailed test results
+6. **Dedicated Result Processor**: New `resultProcessor.ts` module handles all test result parsing and marking
+7. **Precise Line Matching**: Exact numeric comparison prevents false positives (e.g., line 5 vs line 57)
+8. **Smart Compilation**: Maven compilation only runs when needed (checks for `target` directory)
+9. **Consolidated Methods**: Merged duplicate methods (`runTests`/`debugTests`, `runSingleTest`/`debugSingleTest`)
+10. **DRY Principles**: Eliminated code repetition throughout the codebase
 
 ## 🎯 Features
 

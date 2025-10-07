@@ -2,6 +2,57 @@
 
 All notable changes to the Cucumber Java Runner extension will be documented in this file.
 
+## [1.0.9] - 2025-10-07
+
+### 🐛 Critical Bug Fixes
+
+#### Fixed Race Condition in Test Result Processing
+- **Fixed crash during test execution** caused by reading result files before they were completely written
+- **Implemented robust file validation** with retry mechanism (up to 20 attempts with 500ms intervals)
+- **Added comprehensive JSON validation** to ensure result files are complete and valid before processing
+- **Enhanced error handling** to prevent IDE crashes when accessing incomplete data structures
+
+#### Improved Test Result Accuracy
+- **Fixed incorrect test status reporting** where tests with errors were being marked as passed
+- **Corrected pass/fail logic**: A scenario now only passes if ALL steps have status 'passed'
+- **Fixed skipped step handling**: Steps with status 'skipped', 'undefined', 'pending', or 'failed' now correctly fail the scenario
+- **Improved error detection**: Now captures the actual failed step, not subsequent skipped steps
+
+#### Enhanced Error Reporting for Hooks and Setup Errors
+- **Added Before/After Hook error detection**: Errors in `@Before` and `@After` hooks are now properly captured and reported
+- **Scenario-level error reporting**: When all steps are skipped (indicating setup failure), error is shown at scenario level with clear message
+- **Improved error messages**:
+  - Hook errors: `"Before Hook: <location>"` or `"After Hook: <location>"` with detailed error message
+  - Setup errors: `"Scenario Setup Error"` with explanation about possible causes
+  - Empty scenarios: `"Empty Scenario"` with clear description
+- **Correct error location**:
+  - Hook/setup errors point to the scenario line (not individual steps)
+  - Step errors point to the exact failed step line
+
+### 🔧 Technical Improvements
+
+#### Async Result Processing
+- **Made result processing fully asynchronous** to properly handle file I/O operations
+- **Updated all result processing functions** to use async/await pattern
+- **Improved test controller integration** to properly await result processing
+
+#### Robust Data Validation
+- **Added Array.isArray() checks** before iterating over collections
+- **Implemented optional chaining** for safe property access
+- **Added fallback values** for undefined properties
+- **Validated JSON structure** before processing (ensures it's an array)
+
+#### Better Error Context
+- **Prioritizes actual failures** over skipped steps when multiple steps fail
+- **Captures first non-passed step** as the failure point
+- **Continues searching** for steps with error_message (the real failure, not side effects)
+- **Handles edge cases**: empty scenarios, missing results, undefined steps
+
+### 🎯 Impact
+This release dramatically improves the reliability and accuracy of test execution. The race condition fix prevents IDE crashes, while the improved error detection and reporting makes debugging much easier. Users will now see accurate test results with clear, actionable error messages pointing to the right location.
+
+---
+
 ## [1.0.8] - 2025-10-06
 
 ### 🔧 Workflow Improvements
