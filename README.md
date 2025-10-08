@@ -16,12 +16,18 @@ This is an enhanced version of the original [Cucumber Java Easy Runner](https://
 
 ### 🚀 Major Enhancements
 
+- **📊 Structured Logging System (v1.0.11)**: Professional logging with configurable levels
+  - 🎯 **Configurable log levels**: ERROR, WARN, INFO, DEBUG, TRACE - control verbosity via settings
+  - 🔍 **Better troubleshooting**: Set `logLevel: "debug"` or `"trace"` for detailed diagnostics
+  - 📝 **Cleaner code**: Removed all `if (debugMode)` blocks and `debugMode` setting
+  - ⏱️ **Timestamp support**: All log entries include timestamps for better traceability
+  - 📺 **Output Channel integration**: View logs in VS Code's Output Panel
+  - 🎨 **Consistent formatting**: All messages follow standard format `[timestamp] [LEVEL] message`
 - **🎯 100% Accurate Results (v1.0.10)**: Fixed critical result processing bugs
   - ✅ **All scenarios marked correctly**: Previously only first scenario was marked when running multiple scenarios
   - ✅ **Proper background filtering**: Cucumber JSON includes non-test "background" elements that are now filtered out
   - ✅ **File URI handling**: Correctly processes Cucumber's `file:` prefix in JSON results
   - ✅ **Multiple features work perfectly**: Cross-feature contamination fixed with precise path matching
-  - ✅ **Enhanced debug mode**: Comprehensive logging helps troubleshoot any remaining issues
 - **⚡ Lightning Fast Batch Execution (v1.0.9)**: Dramatically improved test execution speed
   - 🚀 **Run all tests in one go**: Multiple features execute in a single Cucumber process
   - ⏱️ **Massive time savings**: No more redundant startups/shutdowns for each feature
@@ -169,6 +175,7 @@ Access settings via: **Settings → Extensions → Cucumber Java Runner** or edi
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
 | `cucumberJavaRunner.enableCodeLens` | boolean | `false` | Enable CodeLens buttons (▶ Run, 🐛 Debug) in feature files. When disabled, use Test Explorer instead for a cleaner interface. |
+| `cucumberJavaRunner.logLevel` | string | `"info"` | Log level for extension output: `error`, `warn`, `info`, `debug`, or `trace`. Use `debug` or `trace` for troubleshooting. |
 | `cucumberJavaRunner.objectFactory` | string | `""` | Custom Cucumber ObjectFactory class for dependency injection (e.g., Spring, Guice, PicoContainer). Leave empty for default. |
 | `cucumberJavaRunner.autoCompileMaven` | boolean | `true` | Automatically compile Maven projects before running tests (only when target directory is missing). |
 | `cucumberJavaRunner.excludeBuildDirectories` | array | `["target", "build", "out", "dist", "node_modules", ".git"]` | Directories to exclude when discovering feature files to avoid duplicates. |
@@ -227,10 +234,28 @@ Use this when you have step definitions in external libraries or modules:
 }
 ```
 
+#### Log Level Configuration
+Control extension logging verbosity:
+```json
+{
+  "cucumberJavaRunner.logLevel": "info"  // Options: error, warn, info, debug, trace
+}
+```
+
+Use `debug` or `trace` when troubleshooting issues:
+```json
+{
+  "cucumberJavaRunner.logLevel": "debug"  // Enables detailed logging
+}
+```
+
+View logs in **Output Panel → Cucumber Java Runner**.
+
 #### Complete Configuration Example
 ```json
 {
   "cucumberJavaRunner.enableCodeLens": false,
+  "cucumberJavaRunner.logLevel": "info",
   "cucumberJavaRunner.objectFactory": "cucumber.api.spring.SpringFactory",
   "cucumberJavaRunner.autoCompileMaven": true,
   "cucumberJavaRunner.excludeBuildDirectories": [

@@ -6,6 +6,7 @@ import * as path from 'path';
 import { parseFeatureFile } from './featureParser';
 import { runCucumberTestBatch, FeatureToRun } from './cucumberRunner';
 import { markChildrenFromResults, getTestErrorMessages, cleanupResultFile, hasFeatureFailures } from './resultProcessor';
+import { logger } from './logger';
 
 /**
  * Test controller for Cucumber tests
@@ -49,7 +50,7 @@ export class CucumberTestController {
 
     // Add refresh button to test controller
     this.controller.refreshHandler = () => {
-      console.log('Test controller refresh triggered');
+      logger.debug('Test controller refresh triggered');
       this.discoverTests();
     };
 
@@ -60,7 +61,7 @@ export class CucumberTestController {
 
     // Add refresh command
     const refreshCommand = vscode.commands.registerCommand('cucumberJavaRunner.refreshTests', () => {
-      console.log('Refreshing Cucumber tests...');
+      logger.info('Refreshing Cucumber tests...');
       this.discoverTests();
     });
     context.subscriptions.push(refreshCommand);
@@ -72,11 +73,11 @@ export class CucumberTestController {
     const excludedPaths = ['target', 'build', 'out', 'dist', 'node_modules', '.git'];
 
     if (excludedPaths.some(excluded => filePath.includes(`/${excluded}/`) || filePath.includes(`\\${excluded}\\`))) {
-      console.log(`Ignoring ${eventType} event for build directory file: ${uri.fsPath}`);
+      logger.trace(`Ignoring ${eventType} event for build directory file:`, uri.fsPath);
       return;
     }
 
-    console.log(`Handling ${eventType} event for: ${uri.fsPath}`);
+    logger.debug(`Handling ${eventType} event for:`, uri.fsPath);
 
     if (eventType === 'delete') {
       this.deleteTest(uri);
@@ -106,7 +107,7 @@ export class CucumberTestController {
 
     // Build the exclude pattern from the configuration
     const excludePattern = '{' + excludeDirs.map(dir => `**/${dir}/**`).join(',') + '}';
-    console.log(`Excluding directories: ${excludePattern}`);
+    logger.debug('Excluding directories:', excludePattern);
 
     // Find all feature files excluding the configured directories
     const featureFiles = await vscode.workspace.findFiles(
@@ -114,10 +115,10 @@ export class CucumberTestController {
       excludePattern
     );
 
-    console.log(`Found ${featureFiles.length} feature files`);
+    logger.info(`Found ${featureFiles.length} feature files`);
 
     for (const uri of featureFiles) {
-      console.log(`Processing feature file: ${uri.fsPath}`);
+      logger.debug('Processing feature file:', uri.fsPath);
       await this.createOrUpdateTest(uri);
     }
   }
@@ -136,7 +137,7 @@ export class CucumberTestController {
 
       // Check if feature already exists
       if (this.watchedFiles.has(featureId)) {
-        console.log(`Feature already exists: ${featureId}`);
+        logger.trace('Feature already exists:', featureId);
         return;
       }
 
@@ -187,10 +188,10 @@ export class CucumberTestController {
         }
       }
 
-      console.log(`Added feature: ${featureInfo.name} with ${featureInfo.scenarios.length} scenarios`);
+      logger.debug(`Added feature: ${featureInfo.name} with ${featureInfo.scenarios.length} scenarios`);
 
     } catch (error) {
-      console.error('Error parsing feature file:', error);
+      logger.error('Error parsing feature file:', error);
     }
   }
 
@@ -201,7 +202,7 @@ export class CucumberTestController {
     if (featureItem) {
       this.controller.items.delete(featureId);
       this.watchedFiles.delete(featureId);
-      console.log(`Deleted feature: ${featureId}`);
+      logger.debug('Deleted feature:', featureId);
     }
   }
 
@@ -299,7 +300,7 @@ export class CucumberTestController {
       }
 
       // Execute all features in a single batch
-      console.log(`Running ${features.length} features in batch mode`);
+      logger.info(`Running ${features.length} features in batch mode`);
       const result = await runCucumberTestBatch(features, isDebug);
 
       // Process results for each feature
@@ -347,7 +348,7 @@ export class CucumberTestController {
       }
     } catch (error) {
       const errorType = isDebug ? 'Debug' : 'Test execution';
-      console.error(`${errorType} error:`, error);
+      logger.error(`${errorType} error:`, error);
       for (const item of testItems) {
         run.failed(item, new vscode.TestMessage(`${errorType} failed: ${error}`));
       }

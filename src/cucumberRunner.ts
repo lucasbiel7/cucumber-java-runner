@@ -5,6 +5,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { findGluePath, resolveMavenClasspath } from './mavenResolver';
+import { logger } from './logger';
 
 /**
  * Result of a test execution with detailed scenario results
@@ -247,7 +248,7 @@ async function runWithVSCode(
     // Timeout after 10 minutes (longer for debug sessions)
     setTimeout(() => {
       disposable.dispose();
-      console.log('Test timeout');
+      logger.warn('Test execution timeout after 10 minutes');
       resolve({ passed: false });
     }, 600000);
   });
@@ -265,7 +266,7 @@ async function waitForValidJsonFile(filePath: string, maxAttempts = 20, delayMs 
     try {
       // Check if file exists
       if (!fs.existsSync(filePath)) {
-        console.log(`Attempt ${attempt}/${maxAttempts}: File does not exist yet: ${filePath}`);
+        logger.trace(`Attempt ${attempt}/${maxAttempts}: File does not exist yet:`, filePath);
         await new Promise(resolve => setTimeout(resolve, delayMs));
         continue;
       }
@@ -273,7 +274,7 @@ async function waitForValidJsonFile(filePath: string, maxAttempts = 20, delayMs 
       // Check if file has content
       const stats = fs.statSync(filePath);
       if (stats.size === 0) {
-        console.log(`Attempt ${attempt}/${maxAttempts}: File is empty: ${filePath}`);
+        logger.trace(`Attempt ${attempt}/${maxAttempts}: File is empty:`, filePath);
         await new Promise(resolve => setTimeout(resolve, delayMs));
         continue;
       }
@@ -283,7 +284,7 @@ async function waitForValidJsonFile(filePath: string, maxAttempts = 20, delayMs 
 
       // Check if content is not just whitespace
       if (fileContent.trim().length === 0) {
-        console.log(`Attempt ${attempt}/${maxAttempts}: File contains only whitespace`);
+        logger.trace(`Attempt ${attempt}/${maxAttempts}: File contains only whitespace`);
         await new Promise(resolve => setTimeout(resolve, delayMs));
         continue;
       }
@@ -293,18 +294,18 @@ async function waitForValidJsonFile(filePath: string, maxAttempts = 20, delayMs 
 
       // Validate that it's an array (Cucumber JSON format)
       if (!Array.isArray(jsonData)) {
-        console.log(`Attempt ${attempt}/${maxAttempts}: JSON is not an array`);
+        logger.trace(`Attempt ${attempt}/${maxAttempts}: JSON is not an array`);
         await new Promise(resolve => setTimeout(resolve, delayMs));
         continue;
       }
 
       // If we got here, file is valid
-      console.log(`File is valid JSON after ${attempt} attempt(s)`);
+      logger.debug(`File is valid JSON after ${attempt} attempt(s)`);
       return true;
 
     } catch (error) {
       // JSON parse error or read error - file might still be being written
-      console.log(`Attempt ${attempt}/${maxAttempts}: Error reading/parsing file - ${error instanceof Error ? error.message : 'Unknown error'}`);
+      logger.trace(`Attempt ${attempt}/${maxAttempts}: Error reading/parsing file - ${error instanceof Error ? error.message : 'Unknown error'}`);
 
       if (attempt < maxAttempts) {
         await new Promise(resolve => setTimeout(resolve, delayMs));
@@ -312,7 +313,7 @@ async function waitForValidJsonFile(filePath: string, maxAttempts = 20, delayMs 
     }
   }
 
-  console.error(`Failed to get valid JSON file after ${maxAttempts} attempts`);
+  logger.error(`Failed to get valid JSON file after ${maxAttempts} attempts`);
   return false;
 }
 
@@ -327,7 +328,7 @@ async function checkCucumberResults(resultFile: string): Promise<boolean> {
     const isValid = await waitForValidJsonFile(resultFile);
 
     if (!isValid) {
-      console.error(`Result file is not valid or was not created: ${resultFile}`);
+      logger.error('Result file is not valid or was not created:', resultFile);
       return false;
     }
 
@@ -335,7 +336,7 @@ async function checkCucumberResults(resultFile: string): Promise<boolean> {
     const fileContent = fs.readFileSync(resultFile, 'utf-8');
     const results = JSON.parse(fileContent);
 
-    console.log(`Analyzing Cucumber results from: ${resultFile}`);
+    logger.info('Analyzing Cucumber results from:', resultFile);
 
     // Cucumber JSON format: array of features
     let totalScenarios = 0;
@@ -344,7 +345,7 @@ async function checkCucumberResults(resultFile: string): Promise<boolean> {
 
     // Validate results is an array
     if (!Array.isArray(results)) {
-      console.error('Results is not an array');
+      logger.error('Results is not an array');
       return false;
     }
 
@@ -382,18 +383,18 @@ async function checkCucumberResults(resultFile: string): Promise<boolean> {
       }
     }
 
-    console.log(`Test Results: ${passedScenarios}/${totalScenarios} scenarios passed`);
+    logger.info(`Test Results: ${passedScenarios}/${totalScenarios} scenarios passed`);
 
     if (failedScenarios > 0) {
-      console.log(`❌ ${failedScenarios} scenario(s) failed`);
+      logger.info(`❌ ${failedScenarios} scenario(s) failed`);
       return false;
     } else {
-      console.log(`✅ All scenarios passed`);
+      logger.info(`✅ All scenarios passed`);
       return true;
     }
 
   } catch (error) {
-    console.error('Error reading Cucumber results:', error);
+    logger.error('Error reading Cucumber results:', error);
     return false;
   }
 }

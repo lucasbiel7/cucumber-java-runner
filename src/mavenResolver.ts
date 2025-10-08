@@ -5,6 +5,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { exec } from 'child_process';
 import * as vscode from 'vscode';
+import { logger } from './logger';
 
 /**
  * Compiles the Maven project before running tests
@@ -16,7 +17,7 @@ async function compileMavenProject(projectRoot: string): Promise<boolean> {
   const autoCompileMaven = config.get<boolean>('autoCompileMaven', true);
 
   if (!autoCompileMaven) {
-    console.log('Auto-compilation is disabled in settings');
+    logger.info('Auto-compilation is disabled in settings');
     return true;
   }
 
@@ -24,7 +25,7 @@ async function compileMavenProject(projectRoot: string): Promise<boolean> {
 
   // Check if target directory exists
   if (fs.existsSync(targetDir)) {
-    console.log('Target directory exists, skipping compilation');
+    logger.debug('Target directory exists, skipping compilation');
     return true;
   }
 
@@ -32,20 +33,20 @@ async function compileMavenProject(projectRoot: string): Promise<boolean> {
     // Execute Maven compile without clean to avoid unnecessary rebuilds
     const command = 'mvn compile test-compile';
 
-    console.log('Target directory not found. Compiling Maven project...');
+    logger.info('Target directory not found. Compiling Maven project...');
 
     exec(command, { cwd: projectRoot }, (error, stdout, stderr) => {
       if (error) {
-        console.error('Error compiling Maven project:', error);
-        console.error('stderr:', stderr);
-        console.log('stdout:', stdout);
+        logger.error('Error compiling Maven project:', error);
+        logger.error('stderr:', stderr);
+        logger.debug('stdout:', stdout);
         resolve(false); // Return false but don't fail - try to continue anyway
         return;
       }
 
-      console.log('Maven project compiled successfully');
+      logger.info('Maven project compiled successfully');
       if (stdout) {
-        console.log('Maven output:', stdout);
+        logger.debug('Maven output:', stdout);
       }
       resolve(true);
     });
@@ -60,7 +61,7 @@ export async function resolveMavenClasspath(projectRoot: string): Promise<string
   // First, compile the Maven project
   const compiled = await compileMavenProject(projectRoot);
   if (!compiled) {
-    console.warn('Maven compilation failed, but continuing with classpath resolution...');
+    logger.warn('Maven compilation failed, but continuing with classpath resolution...');
   }
 
   return new Promise((resolve) => {
@@ -76,8 +77,8 @@ export async function resolveMavenClasspath(projectRoot: string): Promise<string
           ];
 
       if (error) {
-        console.error('Error resolving Maven classpath:', error);
-        console.error('stderr:', stderr);
+        logger.error('Error resolving Maven classpath:', error);
+        logger.error('stderr:', stderr);
         // Return basic classpath as fallback
         resolve(classPaths);
         return;
@@ -89,7 +90,7 @@ export async function resolveMavenClasspath(projectRoot: string): Promise<string
         classPaths.push(...dependencies);
       }
 
-      console.log(`Resolved ${classPaths.length} classpath entries from Maven`);
+      logger.debug(`Resolved ${classPaths.length} classpath entries from Maven`);
       resolve(classPaths);
     });
   });
@@ -124,7 +125,7 @@ export async function findGluePath(projectRoot: string): Promise<string[] | null
   const additionalGluePaths = config.get<string[]>('additionalGluePaths');
 
   if (additionalGluePaths && Array.isArray(additionalGluePaths) && additionalGluePaths.length > 0) {
-    console.log(`Found ${additionalGluePaths.length} additional glue path(s) from configuration`);
+    logger.debug(`Found ${additionalGluePaths.length} additional glue path(s) from configuration`);
     gluePaths.push(...additionalGluePaths);
   }
 
@@ -148,7 +149,7 @@ export async function findGluePath(projectRoot: string): Promise<string[] | null
   }
 
   // Return all glue paths as an array
-  console.log(`Resolved glue path(s): ${gluePaths.join(', ')}`);
+  logger.debug(`Resolved glue path(s): ${gluePaths.join(', ')}`);
   return gluePaths;
 }
 

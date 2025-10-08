@@ -4,6 +4,7 @@
  */
 import * as vscode from 'vscode';
 import * as fs from 'fs';
+import { logger } from './logger';
 
 /**
  * Waits for a file to be completely written and contain valid JSON
@@ -17,7 +18,7 @@ async function waitForValidJsonFile(filePath: string, maxAttempts = 20, delayMs 
     try {
       // Check if file exists
       if (!fs.existsSync(filePath)) {
-        console.log(`Attempt ${attempt}/${maxAttempts}: File does not exist yet: ${filePath}`);
+        logger.trace(`Attempt ${attempt}/${maxAttempts}: File does not exist yet:`, filePath);
         await new Promise(resolve => setTimeout(resolve, delayMs));
         continue;
       }
@@ -25,7 +26,7 @@ async function waitForValidJsonFile(filePath: string, maxAttempts = 20, delayMs 
       // Check if file has content
       const stats = fs.statSync(filePath);
       if (stats.size === 0) {
-        console.log(`Attempt ${attempt}/${maxAttempts}: File is empty: ${filePath}`);
+        logger.trace(`Attempt ${attempt}/${maxAttempts}: File is empty:`, filePath);
         await new Promise(resolve => setTimeout(resolve, delayMs));
         continue;
       }
@@ -35,7 +36,7 @@ async function waitForValidJsonFile(filePath: string, maxAttempts = 20, delayMs 
 
       // Check if content is not just whitespace
       if (fileContent.trim().length === 0) {
-        console.log(`Attempt ${attempt}/${maxAttempts}: File contains only whitespace`);
+        logger.trace(`Attempt ${attempt}/${maxAttempts}: File contains only whitespace`);
         await new Promise(resolve => setTimeout(resolve, delayMs));
         continue;
       }
@@ -45,18 +46,18 @@ async function waitForValidJsonFile(filePath: string, maxAttempts = 20, delayMs 
 
       // Validate that it's an array (Cucumber JSON format)
       if (!Array.isArray(jsonData)) {
-        console.log(`Attempt ${attempt}/${maxAttempts}: JSON is not an array`);
+        logger.trace(`Attempt ${attempt}/${maxAttempts}: JSON is not an array`);
         await new Promise(resolve => setTimeout(resolve, delayMs));
         continue;
       }
 
       // If we got here, file is valid
-      console.log(`File is valid JSON after ${attempt} attempt(s)`);
+      logger.debug(`File is valid JSON after ${attempt} attempt(s)`);
       return true;
 
     } catch (error) {
       // JSON parse error or read error - file might still be being written
-      console.log(`Attempt ${attempt}/${maxAttempts}: Error reading/parsing file - ${error instanceof Error ? error.message : 'Unknown error'}`);
+      logger.trace(`Attempt ${attempt}/${maxAttempts}: Error reading/parsing file - ${error instanceof Error ? error.message : 'Unknown error'}`);
 
       if (attempt < maxAttempts) {
         await new Promise(resolve => setTimeout(resolve, delayMs));
@@ -64,7 +65,7 @@ async function waitForValidJsonFile(filePath: string, maxAttempts = 20, delayMs 
     }
   }
 
-  console.error(`Failed to get valid JSON file after ${maxAttempts} attempts`);
+  logger.error(`Failed to get valid JSON file after ${maxAttempts} attempts`);
   return false;
 }
 
@@ -101,7 +102,7 @@ async function parseResultFile(resultFile: string): Promise<ScenarioResult[]> {
   const isValid = await waitForValidJsonFile(resultFile);
 
   if (!isValid) {
-    console.error(`Result file is not valid or was not created: ${resultFile}`);
+    logger.error('Result file is not valid or was not created:', resultFile);
     return scenarioResults;
   }
 
@@ -111,7 +112,7 @@ async function parseResultFile(resultFile: string): Promise<ScenarioResult[]> {
 
     // Validate results is an array
     if (!Array.isArray(results)) {
-      console.error('Results is not an array');
+      logger.error('Results is not an array');
       return scenarioResults;
     }
 
@@ -223,7 +224,7 @@ async function parseResultFile(resultFile: string): Promise<ScenarioResult[]> {
       }
     }
   } catch (error) {
-    console.error('Error parsing result file:', error);
+    logger.error('Error parsing result file:', error);
   }
 
   return scenarioResults;
@@ -292,15 +293,11 @@ function isSameFeaturePath(fullPath: string, relativePath: string): boolean {
 async function parseResultFileForFeature(resultFile: string, featureUri: vscode.Uri): Promise<ScenarioResult[]> {
   const scenarioResults: ScenarioResult[] = [];
 
-  // Check if debug mode is enabled
-  const config = vscode.workspace.getConfiguration('cucumberJavaRunner');
-  const debugMode = config.get<boolean>('debugMode', false);
-
   // Wait for the file to be completely written with valid JSON
   const isValid = await waitForValidJsonFile(resultFile);
 
   if (!isValid) {
-    console.error(`Result file is not valid or was not created: ${resultFile}`);
+    logger.error('Result file is not valid or was not created:', resultFile);
     return scenarioResults;
   }
 
@@ -310,54 +307,42 @@ async function parseResultFileForFeature(resultFile: string, featureUri: vscode.
 
     // Validate results is an array
     if (!Array.isArray(results)) {
-      console.error('Results is not an array');
+      logger.error('Results is not an array');
       return scenarioResults;
     }
 
     // Get the feature file path from URI
     const featureFilePath = featureUri.fsPath;
 
-    if (debugMode) {
-      console.log(`[DEBUG] Looking for feature: ${featureFilePath}`);
-      console.log(`[DEBUG] Total features in results: ${results.length}`);
-    }
+    logger.debug('Looking for feature:', featureFilePath);
+    logger.debug(`Total features in results: ${results.length}`);
 
     // Cucumber JSON format: array of features
     for (const feature of results) {
       // The feature.uri or feature.id contains the path (could be relative or absolute)
       const featurePath = feature.uri || feature.id || '';
 
-      if (debugMode) {
-        console.log(`[DEBUG] Comparing with feature path from JSON: ${featurePath}`);
-      }
+      logger.debug('Comparing with feature path from JSON:', featurePath);
 
       // Use improved path matching
       const isMatch = isSameFeaturePath(featureFilePath, featurePath);
 
-      if (debugMode) {
-        console.log(`[DEBUG] Match result: ${isMatch}`);
-      }
+      logger.debug(`Match result: ${isMatch}`);
 
       if (isMatch && feature && Array.isArray(feature.elements)) {
-        if (debugMode) {
-          console.log(`[DEBUG] Found matching feature with ${feature.elements.length} elements (scenarios/backgrounds)`);
-        }
+        logger.debug(`Found matching feature with ${feature.elements.length} elements (scenarios/backgrounds)`);
         // Process scenarios for THIS feature only
         for (const scenario of feature.elements) {
           // Skip background elements - they are not test scenarios
           if (scenario.type === 'background') {
-            if (debugMode) {
-              console.log(`[DEBUG] Skipping background element`);
-            }
+            logger.debug('Skipping background element');
             continue;
           }
 
           const scenarioName = scenario?.name || 'Unnamed scenario';
           const scenarioLine = scenario?.line;
 
-          if (debugMode) {
-            console.log(`[DEBUG] Processing scenario: "${scenarioName}" at line ${scenarioLine}`);
-          }
+          logger.debug(`Processing scenario: "${scenarioName}" at line ${scenarioLine}`);
 
           // Check if all steps in the scenario passed
           let scenarioPassed = true;
@@ -377,9 +362,7 @@ async function parseResultFileForFeature(resultFile: string, featureUri: vscode.
                   line: scenarioLine || 0
                 };
 
-                if (debugMode) {
-                  console.log(`[DEBUG] Before hook failed at scenario line ${scenarioLine}`);
-                }
+                logger.debug(`Before hook failed at scenario line ${scenarioLine}`);
                 break;
               }
             }
@@ -390,9 +373,7 @@ async function parseResultFileForFeature(resultFile: string, featureUri: vscode.
             for (const step of scenario.steps) {
               const stepStatus = step?.result?.status || 'no result';
 
-              if (debugMode) {
-                console.log(`[DEBUG]   Step "${step.name}" at line ${step.line}: ${stepStatus}`);
-              }
+              logger.debug(`Step "${step.name}" at line ${step.line}: ${stepStatus}`);
 
               // Skip passed steps
               if (stepStatus === 'passed') {
@@ -418,9 +399,7 @@ async function parseResultFileForFeature(resultFile: string, featureUri: vscode.
                 line: step.line || scenarioLine || 0
               };
 
-              if (debugMode) {
-                console.log(`[DEBUG]   Failed step found at line ${step.line}: ${failedStep.name}`);
-              }
+              logger.debug(`Failed step found at line ${step.line}: ${failedStep.name}`);
 
               // Stop at the first real failure (not skipped)
               break;
@@ -440,9 +419,7 @@ async function parseResultFileForFeature(resultFile: string, featureUri: vscode.
                   line: scenarioLine || 0
                 };
 
-                if (debugMode) {
-                  console.log(`[DEBUG] All steps skipped - setup error at scenario line ${scenarioLine}`);
-                }
+                logger.debug(`All steps skipped - setup error at scenario line ${scenarioLine}`);
               }
             }
           } else if (!failedStep && (!scenario.steps || scenario.steps.length === 0)) {
@@ -454,9 +431,7 @@ async function parseResultFileForFeature(resultFile: string, featureUri: vscode.
               line: scenarioLine || 0
             };
 
-            if (debugMode) {
-              console.log(`[DEBUG] Empty scenario at line ${scenarioLine}`);
-            }
+            logger.debug(`Empty scenario at line ${scenarioLine}`);
           }
 
           // Check After hooks - only if we didn't already fail
@@ -477,9 +452,7 @@ async function parseResultFileForFeature(resultFile: string, featureUri: vscode.
                     line: scenarioLine || 0
                   };
 
-                  if (debugMode) {
-                    console.log(`[DEBUG] After hook failed at scenario line ${scenarioLine}`);
-                  }
+                  logger.debug(`After hook failed at scenario line ${scenarioLine}`);
                 }
                 break;
               }
@@ -495,38 +468,34 @@ async function parseResultFileForFeature(resultFile: string, featureUri: vscode.
 
           scenarioResults.push(result);
 
-          if (debugMode) {
-            console.log(`[DEBUG] Scenario result: "${scenarioName}" at line ${scenarioLine}: ${scenarioPassed ? 'PASSED' : 'FAILED'}`);
-            if (!scenarioPassed && failedStep) {
-              console.log(`[DEBUG]   Failed step: "${failedStep.name}" at line ${failedStep.line}`);
-              console.log(`[DEBUG]   Error: ${failedStep.errorMessage.substring(0, 100)}...`);
-            }
-            console.log(`[DEBUG]   Added to results array. Total so far: ${scenarioResults.length}`);
+          logger.debug(`Scenario result: "${scenarioName}" at line ${scenarioLine}: ${scenarioPassed ? 'PASSED' : 'FAILED'}`);
+          if (!scenarioPassed && failedStep) {
+            logger.debug(`Failed step: "${failedStep.name}" at line ${failedStep.line}`);
+            logger.debug(`Error: ${failedStep.errorMessage.substring(0, 100)}...`);
           }
+          logger.debug(`Added to results array. Total so far: ${scenarioResults.length}`);
         }
 
-        if (debugMode) {
-          console.log(`[DEBUG] Total scenarios found for this feature: ${scenarioResults.length}`);
-          console.log(`[DEBUG] Scenario results summary:`);
-          scenarioResults.forEach((sr, idx) => {
-            console.log(`[DEBUG]   ${idx + 1}. "${sr.name}" at line ${sr.line} - ${sr.passed ? 'PASSED' : 'FAILED'}`);
-          });
-        }
+        logger.debug(`Total scenarios found for this feature: ${scenarioResults.length}`);
+        logger.debug(`Scenario results summary:`);
+        scenarioResults.forEach((sr, idx) => {
+          logger.debug(`${idx + 1}. "${sr.name}" at line ${sr.line} - ${sr.passed ? 'PASSED' : 'FAILED'}`);
+        });
 
         // Found the feature, no need to continue
         break;
       }
     }
 
-    if (debugMode && scenarioResults.length === 0) {
-      console.log(`[DEBUG] WARNING: No scenarios found for feature ${featureFilePath}`);
-      console.log(`[DEBUG] Available feature URIs in results:`);
+    if (scenarioResults.length === 0) {
+      logger.debug(`WARNING: No scenarios found for feature ${featureFilePath}`);
+      logger.debug(`Available feature URIs in results:`);
       for (const feature of results) {
-        console.log(`[DEBUG]   - ${feature.uri || feature.id || 'unknown'}`);
+        logger.debug(`- ${feature.uri || feature.id || 'unknown'}`);
       }
     }
   } catch (error) {
-    console.error('Error parsing result file for feature:', error);
+    logger.error('Error parsing result file for feature:', error);
   }
 
   return scenarioResults;
@@ -543,39 +512,30 @@ export async function markChildrenFromResults(
   run: vscode.TestRun,
   resultFile: string
 ): Promise<void> {
-  // Check if debug mode is enabled
-  const config = vscode.workspace.getConfiguration('cucumberJavaRunner');
-  const debugMode = config.get<boolean>('debugMode', false);
 
   try {
     if (!featureItem.uri) {
-      console.error('Feature item has no URI');
+      logger.error('Feature item has no URI');
       return;
     }
 
-    if (debugMode) {
-      console.log(`[DEBUG] ========================================`);
-      console.log(`[DEBUG] markChildrenFromResults for feature: ${featureItem.uri.fsPath}`);
-      console.log(`[DEBUG] Feature has ${featureItem.children.size} children`);
-      console.log(`[DEBUG] Children IDs:`);
-      featureItem.children.forEach(child => {
-        console.log(`[DEBUG]   - ${child.id} (label: "${child.label}")`);
-      });
-    }
+    logger.debug(`========================================`);
+    logger.debug(`markChildrenFromResults for feature: ${featureItem.uri.fsPath}`);
+    logger.debug(`Feature has ${featureItem.children.size} children`);
+    logger.debug(`Children IDs:`);
+    featureItem.children.forEach(child => {
+      logger.debug(`- ${child.id} (label: "${child.label}")`);
+    });
 
     // Get scenarios for THIS feature only
     const scenarioResults = await parseResultFileForFeature(resultFile, featureItem.uri);
 
-    if (debugMode) {
-      console.log(`[DEBUG] Found ${scenarioResults.length} scenario results for this feature`);
-      console.log(`[DEBUG] Result lines: ${scenarioResults.map(r => r.line).join(', ')}`);
-    }
+    logger.debug(`Found ${scenarioResults.length} scenario results for this feature`);
+    logger.debug(`Result lines: ${scenarioResults.map(r => r.line).join(', ')}`);
 
     // Find the corresponding test items and mark them
     for (const scenarioResult of scenarioResults) {
-      if (debugMode) {
-        console.log(`[DEBUG] Processing result for scenario "${scenarioResult.name}" at line ${scenarioResult.line}`);
-      }
+      logger.debug(`Processing result for scenario "${scenarioResult.name}" at line ${scenarioResult.line}`);
 
       let matched = false;
 
@@ -589,16 +549,12 @@ export async function markChildrenFromResults(
           const lineNumberPart = childIdParts[1].split(':')[0];
           const childScenarioLine = parseInt(lineNumberPart, 10);
 
-          if (debugMode) {
-            console.log(`[DEBUG]   Checking child "${child.label}" with scenario line ${childScenarioLine}`);
-          }
+          logger.debug(`Checking child "${child.label}" with scenario line ${childScenarioLine}`);
 
           if (childScenarioLine === scenarioResult.line) {
             matched = true;
 
-            if (debugMode) {
-              console.log(`[DEBUG]   MATCHED! Marking as ${scenarioResult.passed ? 'PASSED' : 'FAILED'}`);
-            }
+            logger.debug(`MATCHED! Marking as ${scenarioResult.passed ? 'PASSED' : 'FAILED'}`);
 
             if (scenarioResult.passed) {
               run.passed(child);
@@ -621,18 +577,14 @@ export async function markChildrenFromResults(
                     child.uri,
                     new vscode.Position(scenarioResult.line - 1, 0)
                   );
-                  if (debugMode) {
-                    console.log(`[DEBUG]   Error location: scenario line ${scenarioResult.line}`);
-                  }
+                  logger.debug(`Error location: scenario line ${scenarioResult.line}`);
                 } else {
                   // For step-level errors, point to the failed step line
                   message.location = new vscode.Location(
                     child.uri,
                     new vscode.Position(scenarioResult.failedStep.line - 1, 0)
                   );
-                  if (debugMode) {
-                    console.log(`[DEBUG]   Error location: step line ${scenarioResult.failedStep.line}`);
-                  }
+                  logger.debug(`Error location: step line ${scenarioResult.failedStep.line}`);
                 }
               }
               run.failed(child, message);
@@ -644,12 +596,12 @@ export async function markChildrenFromResults(
         }
       });
 
-      if (debugMode && !matched) {
-        console.log(`[DEBUG]   WARNING: No matching child found for scenario at line ${scenarioResult.line}`);
+      if (!matched) {
+        logger.debug(`WARNING: No matching child found for scenario at line ${scenarioResult.line}`);
       }
     }
   } catch (error) {
-    console.error('Error marking children from results:', error);
+    logger.error('Error marking children from results:', error);
   }
 }
 
@@ -662,9 +614,6 @@ export async function markChildrenFromResults(
 export async function getTestErrorMessages(resultFile: string, uri?: vscode.Uri): Promise<vscode.TestMessage[]> {
   const messages: vscode.TestMessage[] = [];
 
-  // Check if debug mode is enabled
-  const config = vscode.workspace.getConfiguration('cucumberJavaRunner');
-  const debugMode = config.get<boolean>('debugMode', false);
 
   if (!uri) {
     return messages;
@@ -674,9 +623,7 @@ export async function getTestErrorMessages(resultFile: string, uri?: vscode.Uri)
     // Get scenarios for THIS feature only
     const scenarioResults = await parseResultFileForFeature(resultFile, uri);
 
-    if (debugMode) {
-      console.log(`[DEBUG] getTestErrorMessages for ${uri.fsPath}: found ${scenarioResults.length} scenarios`);
-    }
+    logger.debug(`getTestErrorMessages for ${uri.fsPath}: found ${scenarioResults.length} scenarios`);
 
     // Collect all scenario failures from this feature
     for (const scenarioResult of scenarioResults) {
@@ -699,18 +646,14 @@ export async function getTestErrorMessages(resultFile: string, uri?: vscode.Uri)
               uri,
               new vscode.Position(scenarioResult.line - 1, 0)
             );
-            if (debugMode) {
-              console.log(`[DEBUG]   Error at scenario line ${scenarioResult.line}: ${scenarioResult.failedStep.name}`);
-            }
+            logger.debug(`Error at scenario line ${scenarioResult.line}: ${scenarioResult.failedStep.name}`);
           } else {
             // For step-level errors, point to the failed step line
             message.location = new vscode.Location(
               uri,
               new vscode.Position(scenarioResult.failedStep.line - 1, 0)
             );
-            if (debugMode) {
-              console.log(`[DEBUG]   Error at step line ${scenarioResult.failedStep.line}: ${scenarioResult.failedStep.name}`);
-            }
+            logger.debug(`Error at step line ${scenarioResult.failedStep.line}: ${scenarioResult.failedStep.name}`);
           }
         }
 
@@ -718,11 +661,9 @@ export async function getTestErrorMessages(resultFile: string, uri?: vscode.Uri)
       }
     }
 
-    if (debugMode) {
-      console.log(`[DEBUG] Total error messages: ${messages.length}`);
-    }
+    logger.debug(`Total error messages: ${messages.length}`);
   } catch (error) {
-    console.error('Error getting test error messages:', error);
+    logger.error('Error getting test error messages:', error);
   }
 
   return messages;
@@ -735,15 +676,12 @@ export async function getTestErrorMessages(resultFile: string, uri?: vscode.Uri)
  * @returns true if the feature has failures, false if all passed
  */
 export async function hasFeatureFailures(resultFile: string, featureUri: vscode.Uri): Promise<boolean> {
-  // Check if debug mode is enabled
-  const config = vscode.workspace.getConfiguration('cucumberJavaRunner');
-  const debugMode = config.get<boolean>('debugMode', false);
 
   // Wait for the file to be completely written with valid JSON
   const isValid = await waitForValidJsonFile(resultFile);
 
   if (!isValid) {
-    console.error(`Result file is not valid or was not created: ${resultFile}`);
+    logger.error('Result file is not valid or was not created:', resultFile);
     return true;
   }
 
@@ -753,16 +691,14 @@ export async function hasFeatureFailures(resultFile: string, featureUri: vscode.
 
     // Validate results is an array
     if (!Array.isArray(results)) {
-      console.error('Results is not an array');
+      logger.error('Results is not an array');
       return true;
     }
 
     // Get the feature file path from URI
     const featureFilePath = featureUri.fsPath;
 
-    if (debugMode) {
-      console.log(`[DEBUG] hasFeatureFailures checking: ${featureFilePath}`);
-    }
+    logger.debug('hasFeatureFailures checking:', featureFilePath);
 
     // Cucumber JSON format: array of features
     for (const feature of results) {
@@ -772,14 +708,10 @@ export async function hasFeatureFailures(resultFile: string, featureUri: vscode.
       // Use improved path matching
       const isMatch = isSameFeaturePath(featureFilePath, featurePath);
 
-      if (debugMode) {
-        console.log(`[DEBUG]   Comparing with: ${featurePath} -> ${isMatch ? 'MATCH' : 'no match'}`);
-      }
+      logger.debug(`Comparing with: ${featurePath} -> ${isMatch ? 'MATCH' : 'no match'}`);
 
       if (isMatch) {
-        if (debugMode) {
-          console.log(`[DEBUG]   MATCHED! Checking scenarios...`);
-        }
+        logger.debug('MATCHED! Checking scenarios...');
         // Check if any scenario in this feature failed
         if (feature && Array.isArray(feature.elements)) {
           for (const scenario of feature.elements) {
@@ -796,9 +728,7 @@ export async function hasFeatureFailures(resultFile: string, featureUri: vscode.
               for (const hook of scenario.before) {
                 if (hook.result && hook.result.status !== 'passed') {
                   scenarioPassed = false;
-                  if (debugMode) {
-                    console.log(`[DEBUG]     Before hook failed in scenario at line ${scenario.line}`);
-                  }
+                  logger.debug(`Before hook failed in scenario at line ${scenario.line}`);
                   break;
                 }
               }
@@ -808,9 +738,7 @@ export async function hasFeatureFailures(resultFile: string, featureUri: vscode.
               for (const hook of scenario.after) {
                 if (hook.result && hook.result.status !== 'passed') {
                   scenarioPassed = false;
-                  if (debugMode) {
-                    console.log(`[DEBUG]     After hook failed in scenario at line ${scenario.line}`);
-                  }
+                  logger.debug(`After hook failed in scenario at line ${scenario.line}`);
                   break;
                 }
               }
@@ -821,9 +749,7 @@ export async function hasFeatureFailures(resultFile: string, featureUri: vscode.
               for (const step of scenario.steps) {
                 if (!step?.result || step.result.status !== 'passed') {
                   scenarioPassed = false;
-                  if (debugMode) {
-                    console.log(`[DEBUG]     Step failed: "${step.name}" at line ${step.line} with status ${step.result?.status}`);
-                  }
+                  logger.debug(`Step failed: "${step.name}" at line ${step.line} with status ${step.result?.status}`);
                   break;
                 }
               }
@@ -831,29 +757,23 @@ export async function hasFeatureFailures(resultFile: string, featureUri: vscode.
 
             // If any scenario failed, the feature failed
             if (!scenarioPassed) {
-              if (debugMode) {
-                console.log(`[DEBUG]   Feature has failures!`);
-              }
+              logger.debug('Feature has failures!');
               return true;
             }
           }
         }
 
         // All scenarios in this feature passed
-        if (debugMode) {
-          console.log(`[DEBUG]   All scenarios passed in this feature`);
-        }
+        logger.debug('All scenarios passed in this feature');
         return false;
       }
     }
 
     // Feature not found in results
-    if (debugMode) {
-      console.log(`[DEBUG] WARNING: Feature not found in results, assuming passed`);
-    }
+    logger.debug('WARNING: Feature not found in results, assuming passed');
     return false;
   } catch (error) {
-    console.error('Error checking feature failures:', error);
+    logger.error('Error checking feature failures:', error);
     return true; // Assume failure on error
   }
 }
@@ -863,20 +783,11 @@ export async function hasFeatureFailures(resultFile: string, featureUri: vscode.
  * @param resultFile Path to the JSON result file
  */
 export function cleanupResultFile(resultFile: string): void {
-  // Check if debug mode is enabled
-  const config = vscode.workspace.getConfiguration('cucumberJavaRunner');
-  const debugMode = config.get<boolean>('debugMode', false);
-
-  if (debugMode) {
-    console.log(`[DEBUG MODE] Keeping result file for inspection: ${resultFile}`);
-    return;
-  }
-
   if (fs.existsSync(resultFile)) {
     try {
       fs.unlinkSync(resultFile);
     } catch (error) {
-      console.error('Error cleaning up result file:', error);
+      logger.error('Error cleaning up result file:', error);
     }
   }
 }

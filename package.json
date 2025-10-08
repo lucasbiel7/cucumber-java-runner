@@ -2,7 +2,7 @@
   "name": "cucumber-java-runner",
   "displayName": "Cucumber Java Runner",
   "description": "VS Code extension for running Cucumber Feature files in Java projects",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "publisher": "lucasbiel7",
   "author": {
     "name": "lucasbiel7"
@@ -192,11 +192,20 @@
           },
           "markdownDescription": "Additional glue paths for Cucumber step definitions. Useful when using step definitions from external libraries or modules.\n\nExample:\n```json\n[\n  \"com.external.library.steps\",\n  \"org.another.library.cucumber.steps\"\n]\n```"
         },
-        "cucumberJavaRunner.debugMode": {
-          "type": "boolean",
-          "default": false,
-          "description": "Enable debug mode to keep result JSON files and show detailed logs for troubleshooting.",
-          "order": 6
+        "cucumberJavaRunner.logLevel": {
+          "type": "string",
+          "default": "info",
+          "enum": ["error", "warn", "info", "debug", "trace"],
+          "enumDescriptions": [
+            "Only show critical errors",
+            "Show warnings and errors",
+            "Show general information, warnings, and errors (default)",
+            "Show detailed debug information (recommended for troubleshooting)",
+            "Show very detailed trace information (step-by-step execution)"
+          ],
+          "description": "Set the logging level for the extension. Higher levels include all lower level messages.",
+          "order": 6,
+          "markdownDescription": "Control how much information the extension logs:\n- **error**: Only critical errors\n- **warn**: Warnings + errors\n- **info**: General info + warnings + errors (default)\n- **debug**: Detailed debug info (recommended for troubleshooting)\n- **trace**: Very detailed step-by-step execution"
         }
       }
     }

@@ -3,6 +3,7 @@
  */
 import * as vscode from 'vscode';
 import { FeatureInfo, ScenarioInfo } from './types';
+import { logger } from './logger';
 
 /**
  * Finds example row info
@@ -144,11 +145,11 @@ export function findExampleAtLine(document: vscode.TextDocument, line: number): 
 
     // Check the line content for debugging
     const currentLineText = lines[line].trim();
-    console.log(`Debug: Current line (${line}): "${currentLineText}"`);
+    logger.debug(`Current line (${line}): "${currentLineText}"`);
 
     // Check if the line starts with |
     if (!currentLineText.startsWith('|')) {
-      console.log('Debug: Line does not start with |');
+      logger.debug('Line does not start with |');
       return null;
     }
 
@@ -160,17 +161,17 @@ export function findExampleAtLine(document: vscode.TextDocument, line: number): 
     // First go backwards to find the Examples heading
     for (let i = line; i >= 0; i--) {
       const lineText = lines[i].trim();
-      console.log(`Debug: Backward line (${i}): "${lineText}"`);
+      logger.trace(`Backward line (${i}): "${lineText}"`);
 
       if (lineText.startsWith('Examples:')) {
         examplesLine = i;
-        console.log(`Debug: Examples heading found, line: ${examplesLine}`);
+        logger.debug(`Examples heading found, line: ${examplesLine}`);
         break;
       }
     }
 
     if (examplesLine === -1) {
-      console.log('Debug: Examples heading not found');
+      logger.debug('Examples heading not found');
       return null;
     }
 
@@ -179,13 +180,13 @@ export function findExampleAtLine(document: vscode.TextDocument, line: number): 
       const lineText = lines[i].trim();
       if (lineText.startsWith('|')) {
         headerLine = i;
-        console.log(`Debug: Header row found, line: ${headerLine}`);
+        logger.debug(`Header row found, line: ${headerLine}`);
         break;
       }
     }
 
     if (headerLine === -1 || line <= headerLine) {
-      console.log(`Debug: Valid header row not found or current line (${line}) is before header line (${headerLine})`);
+      logger.debug(`Valid header row not found or current line (${line}) is before header line (${headerLine})`);
       return null;
     }
 
@@ -194,13 +195,13 @@ export function findExampleAtLine(document: vscode.TextDocument, line: number): 
       const lineText = lines[i].trim();
       if (lineText.startsWith('Scenario Outline:')) {
         scenarioOutlineLine = i + 1; // 1-indexed
-        console.log(`Debug: Scenario Outline found, line: ${scenarioOutlineLine}`);
+        logger.debug(`Scenario Outline found, line: ${scenarioOutlineLine}`);
         break;
       }
     }
 
     if (scenarioOutlineLine === -1) {
-      console.log('Debug: Scenario Outline not found');
+      logger.debug('Scenario Outline not found');
       return null;
     }
 
@@ -213,7 +214,7 @@ export function findExampleAtLine(document: vscode.TextDocument, line: number): 
     };
   } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-    console.error(`Error in findExampleAtLine: ${errorMessage}`);
+    logger.error(`Error in findExampleAtLine: ${errorMessage}`);
     return null;
   }
 }

@@ -8,23 +8,29 @@ import { CucumberTestController } from './testController';
 import { CucumberCodeLensProvider } from './codeLensProvider';
 import { runCucumberTest } from './cucumberRunner';
 import { findScenarioAtLine, findExampleAtLine } from './featureParser';
+import { logger, initializeLogger } from './logger';
 
 // Global test controller instance
 let globalTestController: CucumberTestController | undefined;
 
 export function activate(context: vscode.ExtensionContext) {
+  // Initialize logger first
+  initializeLogger(context);
+  logger.info('Cucumber Java Runner extension is activating');
 
   // Dispose existing controller if it exists
   if (globalTestController) {
     try {
       globalTestController.dispose();
+      logger.debug('Disposed previous test controller');
     } catch (error) {
-      console.log('Error disposing previous controller:', error);
+      logger.error('Error disposing previous controller:', error);
     }
   }
 
   // Create new test controller
   globalTestController = new CucumberTestController(context);
+  logger.info('Test controller created');
 
   // Check if CodeLens should be enabled (default: false since we have Test Explorer)
   const config = vscode.workspace.getConfiguration('cucumberJavaRunner');
@@ -38,13 +44,15 @@ export function activate(context: vscode.ExtensionContext) {
       codeLensProvider
     );
     context.subscriptions.push(codeLensDisposable);
-    console.log('CodeLens provider registered');
+    logger.info('CodeLens provider registered');
   } else {
-    console.log('CodeLens disabled - use Test Explorer instead');
+    logger.info('CodeLens disabled - use Test Explorer instead');
   }
 
   // Register all commands
   registerCommands(context);
+
+  logger.info('Cucumber Java Runner extension activated successfully');
 }
 
 /**
@@ -73,7 +81,7 @@ function registerCommands(context: vscode.ExtensionContext) {
   // CodeLens command to run the entire feature file
   context.subscriptions.push(
     vscode.commands.registerCommand('cucumberJavaRunner.runFeatureCodeLens', async (uri: vscode.Uri) => {
-      console.log('runFeatureCodeLensCommand called with URI:', uri.toString());
+      logger.debug('runFeatureCodeLensCommand called with URI:', uri.toString());
       vscode.window.showInformationMessage('Feature test starting...');
       runCucumberTest(uri, undefined, undefined, false);
     })
@@ -82,7 +90,7 @@ function registerCommands(context: vscode.ExtensionContext) {
   // CodeLens command to run a single scenario
   context.subscriptions.push(
     vscode.commands.registerCommand('cucumberJavaRunner.runScenarioCodeLens', async (uri: vscode.Uri, lineNumber: number) => {
-      console.log('runScenarioCodeLensCommand called with URI:', uri.toString(), 'line:', lineNumber);
+      logger.debug('runScenarioCodeLensCommand called - URI:', uri.toString(), 'line:', lineNumber);
       vscode.window.showInformationMessage(`Scenario test starting at line ${lineNumber}...`);
       runCucumberTest(uri, lineNumber, undefined, false);
     })
@@ -91,7 +99,7 @@ function registerCommands(context: vscode.ExtensionContext) {
   // CodeLens command to run a single example
   context.subscriptions.push(
     vscode.commands.registerCommand('cucumberJavaRunner.runExampleCodeLens', async (uri: vscode.Uri, scenarioLine: number, exampleLine: number) => {
-      console.log('runExampleCodeLensCommand called with URI:', uri.toString(), 'scenario line:', scenarioLine, 'example line:', exampleLine);
+      logger.debug('runExampleCodeLensCommand called - URI:', uri.toString(), 'scenario line:', scenarioLine, 'example line:', exampleLine);
       vscode.window.showInformationMessage(`Example test starting at line ${exampleLine}...`);
       runCucumberTest(uri, scenarioLine, exampleLine, false);
     })
@@ -140,7 +148,7 @@ function registerCommands(context: vscode.ExtensionContext) {
       }
 
       const currentLine = editor.selection.active.line;
-      console.log(`runExampleCommand called, line: ${currentLine}`);
+      logger.debug(`runExampleCommand called, line: ${currentLine}`);
 
       // First check if the line starts with |
       const lineText = editor.document.lineAt(currentLine).text.trim();
@@ -182,7 +190,7 @@ function registerCommands(context: vscode.ExtensionContext) {
   // CodeLens command to debug the entire feature file
   context.subscriptions.push(
     vscode.commands.registerCommand('cucumberJavaRunner.debugFeatureCodeLens', async (uri: vscode.Uri) => {
-      console.log('debugFeatureCodeLensCommand called with URI:', uri.toString());
+      logger.debug('debugFeatureCodeLensCommand called with URI:', uri.toString());
       vscode.window.showInformationMessage('Feature debug starting...');
       runCucumberTest(uri, undefined, undefined, true);
     })
@@ -191,7 +199,7 @@ function registerCommands(context: vscode.ExtensionContext) {
   // CodeLens command to debug a single scenario
   context.subscriptions.push(
     vscode.commands.registerCommand('cucumberJavaRunner.debugScenarioCodeLens', async (uri: vscode.Uri, lineNumber: number) => {
-      console.log('debugScenarioCodeLensCommand called with URI:', uri.toString(), 'line:', lineNumber);
+      logger.debug('debugScenarioCodeLensCommand called - URI:', uri.toString(), 'line:', lineNumber);
       vscode.window.showInformationMessage(`Scenario debug starting at line ${lineNumber}...`);
       runCucumberTest(uri, lineNumber, undefined, true);
     })
@@ -200,7 +208,7 @@ function registerCommands(context: vscode.ExtensionContext) {
   // CodeLens command to debug a single example
   context.subscriptions.push(
     vscode.commands.registerCommand('cucumberJavaRunner.debugExampleCodeLens', async (uri: vscode.Uri, scenarioLine: number, exampleLine: number) => {
-      console.log('debugExampleCodeLensCommand called with URI:', uri.toString(), 'scenario line:', scenarioLine, 'example line:', exampleLine);
+      logger.debug('debugExampleCodeLensCommand called - URI:', uri.toString(), 'scenario line:', scenarioLine, 'example line:', exampleLine);
       vscode.window.showInformationMessage(`Example debug starting at line ${exampleLine}...`);
       runCucumberTest(uri, scenarioLine, exampleLine, true);
     })
@@ -249,7 +257,7 @@ function registerCommands(context: vscode.ExtensionContext) {
       }
 
       const currentLine = editor.selection.active.line;
-      console.log(`debugExampleCommand called, line: ${currentLine}`);
+      logger.debug(`debugExampleCommand called, line: ${currentLine}`);
 
       // First check if the line starts with |
       const lineText = editor.document.lineAt(currentLine).text.trim();

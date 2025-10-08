@@ -2,7 +2,32 @@
 
 All notable changes to the Cucumber Java Runner extension will be documented in this file.
 
-## [1.0.10] - 2025-10-08
+## [1.0.11] - 2025-01-08
+
+### 🔧 Refactoring - Structured Logging System
+
+#### New Logger Utility
+
+**Centralized Logging:**
+- **New `logger.ts` module**: Centralized logging utility with configurable log levels
+- **Multiple log levels**: ERROR, WARN, INFO, DEBUG, TRACE - allows fine-grained control over log verbosity
+- **Configuration-based**: Log level controlled via `cucumberJavaRunner.logLevel` setting in VS Code
+- **Output Channel integration**: All logs now go to VS Code Output Channel for better visibility
+- **Clean log messages**: Log level prefixes (ERROR, WARN, DEBUG, etc.) are automatically added by the logger
+
+**Configuration:**
+- **New setting**: `cucumberJavaRunner.logLevel` - Set log level (error, warn, info, debug, trace)
+- **Removed setting**: `cucumberJavaRunner.debugMode` - Replaced by `logLevel` setting
+- **Dynamic updates**: Log level changes apply immediately without restarting the extension
+
+**Benefits:**
+- **No more scattered `console.log` statements**: All logging uses structured logger
+- **Cleaner code**: Removed all `if (debugMode)` blocks throughout the codebase
+- **Better debugging**: Use TRACE level for verbose output, INFO for normal operation
+- **Production-ready**: Set to ERROR in production, DEBUG during development
+- **Timestamp support**: All log entries include timestamps for better traceability
+- **Performance**: Lower log levels reduce overhead in production
+- **Consistent formatting**: All log messages follow the same format `[timestamp] [LEVEL] message`
 
 ### 🐛 Critical Bug Fix - Multiple Features Result Processing
 
