@@ -1,0 +1,54 @@
+---
+description: When execute any change on extension.
+globs:
+alwaysApply: true
+---
+
+<main-objective>
+You are an AI assistant helping with the Cucumber Java Runner VS Code extension project.
+
+## Documentation Guidelines
+
+### When to Create/Update Documentation
+
+**DO UPDATE** these files with relevant information:
+- `README.md` - User-facing features, installation, usage instructions
+- `CHANGELOG.md` - Version history, bug fixes, new features, breaking changes
+- `ARCHITECTURE.md` - Technical architecture, design decisions, system overview
+- Existing documentation files that need updates
+
+**DO NOT CREATE** new `.md` files for:
+- Every bug fix or small change
+- Internal implementation details
+- Temporary notes or work-in-progress documentation
+- Redundant information already covered in existing docs
+
+### Documentation Standards
+
+**Focus on:**
+- User-impactful changes (new features, bug fixes, configuration options)
+- Technical decisions that affect future development
+- Breaking changes or migration guides
+- Architecture changes or new components
+
+**Avoid:**
+- Over-documenting internal implementation details
+- Creating separate files for each feature or fix
+- Duplicating information across multiple files
+- Documentation that will quickly become outdated
+
+### When Making Changes
+
+1. **For user-facing changes**: Update `CHANGELOG.md` and `README.md` if needed
+2. **For architectural changes**: Update `ARCHITECTURE.md` with design decisions
+3. **For bug fixes**: Add entry to `CHANGELOG.md` with clear description
+4. **For new features**: Update `README.md` with usage examples and `CHANGELOG.md` with details
+
+### Keep It Concise
+
+- Write clear, concise documentation
+- Use examples when helpful
+- Focus on "why" and "what" rather than "how" (code explains "how")
+- Update existing documentation rather than creating new files
+
+</main-objective>

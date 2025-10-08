@@ -16,12 +16,25 @@ This is an enhanced version of the original [Cucumber Java Easy Runner](https://
 
 ### 🚀 Major Enhancements
 
-- **🛡️ Rock-Solid Reliability (v1.0.9)**: Fixed critical race conditions and improved error handling
+- **🎯 100% Accurate Results (v1.0.10)**: Fixed critical result processing bugs
+  - ✅ **All scenarios marked correctly**: Previously only first scenario was marked when running multiple scenarios
+  - ✅ **Proper background filtering**: Cucumber JSON includes non-test "background" elements that are now filtered out
+  - ✅ **File URI handling**: Correctly processes Cucumber's `file:` prefix in JSON results
+  - ✅ **Multiple features work perfectly**: Cross-feature contamination fixed with precise path matching
+  - ✅ **Enhanced debug mode**: Comprehensive logging helps troubleshoot any remaining issues
+- **⚡ Lightning Fast Batch Execution (v1.0.9)**: Dramatically improved test execution speed
+  - 🚀 **Run all tests in one go**: Multiple features execute in a single Cucumber process
+  - ⏱️ **Massive time savings**: No more redundant startups/shutdowns for each feature
+  - 🎯 **Smart mode detection**: Automatically uses batch mode when running multiple features
+  - 📊 **Perfect for CI/CD**: Optimized for continuous integration pipelines
+- **🛡️ Rock-Solid Reliability (v1.0.9)**: Fixed critical bugs and improved error handling
+  - ✅ **No more infinite loops**: Fixed Test Explorer running tests repeatedly
   - ✅ **No more crashes**: Robust file validation prevents reading incomplete result files
   - ✅ **Accurate results**: Fixed logic that incorrectly marked failed tests as passed
   - ✅ **Smart error detection**: Detects errors in @Before/@After hooks and scenario setup
   - ✅ **Clear error messages**: Shows exactly what failed (hook, setup, or specific step)
   - ✅ **Correct error location**: Points to scenario line for setup errors, step line for step failures
+  - ✅ **Optimized execution**: No duplicate test runs when executing multiple tests
 - **🌐 Multi-Platform Availability (v1.0.7+)**: Now available on both VS Code Marketplace AND Open VSX Registry
   - ✅ Full support for **Cursor**, **VSCodium**, **Eclipse Theia**, **Gitpod**, and other VS Code-based editors
   - ✅ Automated dual publishing to both marketplaces
@@ -39,16 +52,17 @@ This is an enhanced version of the original [Cucumber Java Easy Runner](https://
 
 ### 🔍 Technical Improvements
 
-1. **Robust File Processing (v1.0.9)**: Async result processing with retry mechanism and comprehensive validation
-2. **Accurate Test Status (v1.0.9)**: Correct pass/fail logic - only passes if ALL steps are 'passed'
-3. **Hook Error Detection (v1.0.9)**: Detects and reports errors in @Before/@After hooks
-4. **Unified Test Execution**: Single `runCucumberTest()` function handles both run and debug modes
-5. **Result File Analysis**: Uses `--plugin json:${resultFile}` to capture detailed test results
-6. **Dedicated Result Processor**: New `resultProcessor.ts` module handles all test result parsing and marking
-7. **Precise Line Matching**: Exact numeric comparison prevents false positives (e.g., line 5 vs line 57)
-8. **Smart Compilation**: Maven compilation only runs when needed (checks for `target` directory)
-9. **Consolidated Methods**: Merged duplicate methods (`runTests`/`debugTests`, `runSingleTest`/`debugSingleTest`)
-10. **DRY Principles**: Eliminated code repetition throughout the codebase
+1. **Batch Execution (v1.0.9)**: Multiple features run in a single Cucumber process for maximum speed
+2. **Robust File Processing (v1.0.9)**: Async result processing with retry mechanism and comprehensive validation
+3. **Accurate Test Status (v1.0.9)**: Correct pass/fail logic - only passes if ALL steps are 'passed'
+4. **Hook Error Detection (v1.0.9)**: Detects and reports errors in @Before/@After hooks
+5. **Unified Test Execution**: Single `runCucumberTest()` function handles both run and debug modes
+6. **Result File Analysis**: Uses `--plugin json:${resultFile}` to capture detailed test results
+7. **Dedicated Result Processor**: New `resultProcessor.ts` module handles all test result parsing and marking
+8. **Precise Line Matching**: Exact numeric comparison prevents false positives (e.g., line 5 vs line 57)
+9. **Smart Compilation**: Maven compilation only runs when needed (checks for `target` directory)
+10. **Consolidated Methods**: Merged duplicate methods (`runTests`/`debugTests`, `runSingleTest`/`debugSingleTest`)
+11. **DRY Principles**: Eliminated code repetition throughout the codebase
 
 ## 🎯 Features
 

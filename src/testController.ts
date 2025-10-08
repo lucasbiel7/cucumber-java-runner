@@ -4,8 +4,8 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { parseFeatureFile } from './featureParser';
-import { runCucumberTest } from './cucumberRunner';
-import { markChildrenFromResults, getTestErrorMessages, cleanupResultFile } from './resultProcessor';
+import { runCucumberTestBatch, FeatureToRun } from './cucumberRunner';
+import { markChildrenFromResults, getTestErrorMessages, cleanupResultFile, hasFeatureFailures } from './resultProcessor';
 
 /**
  * Test controller for Cucumber tests
@@ -210,13 +210,12 @@ export class CucumberTestController {
 
     const testItems = request.include || this.gatherAllTests();
 
-    for (const testItem of testItems) {
-      if (token.isCancellationRequested) {
-        break;
-      }
+    // Filter to avoid running both parent and children
+    // If a feature is in the list, don't run its children separately
+    const itemsToRun = this.filterTestItems(testItems);
 
-      await this.executeSingleTest(testItem, run, isDebug);
-    }
+    // Always use batch mode (even for single tests)
+    await this.executeBatchTests(itemsToRun, run, isDebug, token);
 
     run.end();
   }
@@ -224,68 +223,167 @@ export class CucumberTestController {
   private gatherAllTests(): vscode.TestItem[] {
     const tests: vscode.TestItem[] = [];
 
+    // When gathering all tests, only include features (not individual scenarios)
+    // Running a feature will automatically run all its scenarios
     this.controller.items.forEach(item => {
       tests.push(item);
-      item.children.forEach(child => tests.push(child));
     });
 
     return tests;
   }
 
-  private async executeSingleTest(testItem: vscode.TestItem, run: vscode.TestRun, isDebug: boolean) {
-    run.started(testItem);
+  private async executeBatchTests(
+    testItems: vscode.TestItem[],
+    run: vscode.TestRun,
+    isDebug: boolean,
+    token: vscode.CancellationToken
+  ) {
+    // Mark all tests as started
+    for (const item of testItems) {
+      run.started(item);
+    }
 
     try {
-      if (!testItem.uri) {
-        throw new Error('Test item has no URI');
-      }
-      const uri = testItem.uri;
-      const consoleType = isDebug ? 'debug console' : 'terminal';
+      // Prepare features for batch execution
+      const features: FeatureToRun[] = [];
+      const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
 
-      let lineNumber: number | undefined;
-      let exampleLine: number | undefined;
-
-      // Execute the test with extracted parameters
-      const result = await runCucumberTest(uri, lineNumber, exampleLine, isDebug);
-
-      // If this is a feature file with children (scenarios), mark each child individually
-      const hasChildren = !lineNumber && testItem.children.size > 0 && result.resultFile;
-
-      if (hasChildren && result.resultFile) {
-        await markChildrenFromResults(testItem, run, result.resultFile);
-        // When children are marked individually, just mark parent based on overall result
-        if (result.passed) {
-          run.passed(testItem);
-        } else {
-          run.failed(testItem, new vscode.TestMessage(`One or more scenarios failed`));
+      if (!workspaceFolder) {
+        for (const item of testItems) {
+          run.failed(item, new vscode.TestMessage('No workspace folder found'));
         }
-      } else if (result.passed) {
-        // Test passed
-        run.passed(testItem);
-      } else if (result.resultFile) {
-        // For direct test execution (scenario or feature without children structure)
-        // Get detailed error messages from result file
-        const errorMessages = await getTestErrorMessages(result.resultFile, uri);
-        if (errorMessages.length > 0) {
-          // Pass all error messages to show all failed scenarios
-          run.failed(testItem, errorMessages);
-        } else {
-          run.failed(testItem, new vscode.TestMessage(`Test failed. Check ${consoleType} for details.`));
-        }
-      } else {
-        run.failed(testItem, new vscode.TestMessage(`Test failed. Check ${consoleType} for details.`));
+        return;
       }
 
-      // Clean up result file if it exists
+      for (const item of testItems) {
+        if (!item.uri) {
+          run.failed(item, new vscode.TestMessage('Test item has no URI'));
+          continue;
+        }
+
+        const relativePath = path.relative(workspaceFolder.uri.fsPath, item.uri.fsPath);
+
+        // Extract line numbers from test item ID
+        // ID formats:
+        // - Feature: "path/to/file.feature"
+        // - Scenario: "path/to/file.feature:scenario:5"
+        // - Example: "path/to/file.feature:scenario:5:example:10"
+        let lineNumber: number | undefined;
+        let exampleLine: number | undefined;
+
+        const idParts = item.id.split(':scenario:');
+        if (idParts.length > 1) {
+          // This is a scenario or example
+          const afterScenario = idParts[1];
+          const exampleParts = afterScenario.split(':example:');
+
+          // Get scenario line number
+          lineNumber = parseInt(exampleParts[0], 10);
+
+          // Get example line number if present
+          if (exampleParts.length > 1) {
+            exampleLine = parseInt(exampleParts[1], 10);
+          }
+        }
+
+        features.push({
+          uri: item.uri,
+          relativePath: relativePath,
+          lineNumber: lineNumber,
+          exampleLine: exampleLine
+        });
+      }
+
+      if (features.length === 0) {
+        return;
+      }
+
+      // Execute all features in a single batch
+      console.log(`Running ${features.length} features in batch mode`);
+      const result = await runCucumberTestBatch(features, isDebug);
+
+      // Process results for each feature
       if (result.resultFile) {
-        cleanupResultFile(result.resultFile);
-      }
+        for (const item of testItems) {
+          if (token.isCancellationRequested) {
+            break;
+          }
 
+          // Mark children from results
+          if (item.children.size > 0) {
+            await markChildrenFromResults(item, run, result.resultFile);
+          }
+
+          // Check if THIS specific feature has failures
+          if (!item.uri) {
+            run.failed(item, new vscode.TestMessage('Test item has no URI'));
+            continue;
+          }
+
+          const featureFailed = await hasFeatureFailures(result.resultFile, item.uri);
+
+          if (featureFailed) {
+            // This feature has failures - get error messages
+            const errorMessages = await getTestErrorMessages(result.resultFile, item.uri);
+            if (errorMessages.length > 0) {
+              run.failed(item, errorMessages);
+            } else {
+              run.failed(item, new vscode.TestMessage('Test failed'));
+            }
+          } else {
+            // This feature passed
+            run.passed(item);
+          }
+        }
+
+        // Clean up result file
+        cleanupResultFile(result.resultFile);
+      } else {
+        // No result file - mark all as failed
+        const consoleType = isDebug ? 'debug console' : 'terminal';
+        for (const item of testItems) {
+          run.failed(item, new vscode.TestMessage(`Test failed. Check ${consoleType} for details.`));
+        }
+      }
     } catch (error) {
       const errorType = isDebug ? 'Debug' : 'Test execution';
       console.error(`${errorType} error:`, error);
-      run.failed(testItem, new vscode.TestMessage(`${errorType} failed: ${error}`));
+      for (const item of testItems) {
+        run.failed(item, new vscode.TestMessage(`${errorType} failed: ${error}`));
+      }
     }
+  }
+
+  private filterTestItems(items: readonly vscode.TestItem[]): vscode.TestItem[] {
+    const filtered: vscode.TestItem[] = [];
+
+    // Collect feature IDs that are being run
+    const featureIdsToRun = new Set<string>();
+    for (const item of items) {
+      if (item.children.size > 0) {
+        // It's a feature
+        featureIdsToRun.add(item.id);
+      }
+    }
+
+    // Filter items to avoid running both parent and children
+    for (const item of items) {
+      if (item.children.size > 0) {
+        // It's a feature - always include
+        filtered.push(item);
+      } else {
+        // It's a scenario/example - only include if its feature is not in the list
+        const parts = item.id.split(':scenario:');
+        const featureId = parts[0];
+
+        // Only include this scenario if its parent feature is NOT being run
+        if (!featureIdsToRun.has(featureId)) {
+          filtered.push(item);
+        }
+      }
+    }
+
+    return filtered;
   }
 
   dispose() {

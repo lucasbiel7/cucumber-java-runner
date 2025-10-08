@@ -15,31 +15,41 @@ export interface TestExecutionResult {
 }
 
 /**
- * Runs or debugs the selected feature, scenario, or example row
- * @param uri - The URI of the feature file
- * @param lineNumber - Optional line number for scenario
- * @param exampleLine - Optional line number for example
+ * Information about a feature to be executed in batch
+ */
+export interface FeatureToRun {
+  uri: vscode.Uri;
+  relativePath: string;
+  lineNumber?: number;
+  exampleLine?: number;
+}
+
+/**
+ * Runs multiple features in a single Cucumber execution (batch mode)
+ * @param features - Array of features to run
  * @param isDebug - Whether to run in debug mode (default: false)
  * @returns TestExecutionResult with pass/fail status and result file path
  */
-export async function runCucumberTest(
-  uri: vscode.Uri,
-  lineNumber?: number,
-  exampleLine?: number,
+export async function runCucumberTestBatch(
+  features: FeatureToRun[],
   isDebug = false
 ): Promise<TestExecutionResult> {
-  // Find the project root directory
-  const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
+  if (features.length === 0) {
+    return { passed: false };
+  }
+
+  // Use the first feature to get workspace folder
+  const workspaceFolder = vscode.workspace.getWorkspaceFolder(features[0].uri);
   if (!workspaceFolder) {
     vscode.window.showErrorMessage('Feature file is not inside a workspace.');
     return { passed: false };
   }
 
-  // Get the relative path of the feature file in the project
-  const relativePath = path.relative(workspaceFolder.uri.fsPath, uri.fsPath);
+  const projectRoot = workspaceFolder.uri.fsPath;
+
   try {
     // Scan the project to find the steps directory
-    const gluePaths = await findGluePath(workspaceFolder.uri.fsPath);
+    const gluePaths = await findGluePath(projectRoot);
 
     if (!gluePaths) {
       // If glue path is not found, ask the user
@@ -53,21 +63,17 @@ export async function runCucumberTest(
         return { passed: false };
       }
 
-      return await executeCucumberTest(
-        workspaceFolder.uri.fsPath,
-        relativePath,
+      return await executeCucumberTestBatch(
+        projectRoot,
+        features,
         [userInput],
-        lineNumber,
-        exampleLine,
         isDebug
       );
     } else {
-      return await executeCucumberTest(
-        workspaceFolder.uri.fsPath,
-        relativePath,
+      return await executeCucumberTestBatch(
+        projectRoot,
+        features,
         gluePaths,
-        lineNumber,
-        exampleLine,
         isDebug
       );
     }
@@ -79,86 +85,65 @@ export async function runCucumberTest(
 }
 
 /**
- * Executes the Cucumber test - IntelliJ-style approach
+ * Runs or debugs the selected feature, scenario, or example row
+ * @param uri - The URI of the feature file
+ * @param lineNumber - Optional line number for scenario
+ * @param exampleLine - Optional line number for example
+ * @param isDebug - Whether to run in debug mode (default: false)
  * @returns TestExecutionResult with pass/fail status and result file path
  */
-async function executeCucumberTest(
-  projectRoot: string,
-  featurePath: string,
-  gluePaths: string[],
+export async function runCucumberTest(
+  uri: vscode.Uri,
   lineNumber?: number,
-  exampleLineNumber?: number,
+  exampleLine?: number,
   isDebug = false
 ): Promise<TestExecutionResult> {
-  // Path to the feature file to run
-  let cucumberPath = featurePath.replace(/\\/g, '/');
-
-  // Determine the name for the configuration
-  const configPrefix = isDebug ? 'Cucumber Debug: ' : 'Cucumber: ';
-  let configName = configPrefix;
-  let targetDescription = '';
-
-  // Read the feature file to get line content
-  try {
-    const featureContent = fs.readFileSync(path.join(projectRoot, featurePath), 'utf-8');
-    const lines = featureContent.split('\n');
-
-    // If a specific line is specified, add that line
-    if (lineNumber && lineNumber > 0) {
-      if (exampleLineNumber && exampleLineNumber > 0) {
-        // Running/debugging an example - use only the example line
-        cucumberPath += ':' + exampleLineNumber;
-
-        // Get the example line content
-        if (exampleLineNumber <= lines.length) {
-          const exampleContent = lines[exampleLineNumber - 1].trim();
-          targetDescription = exampleContent || `Example at line ${exampleLineNumber}`;
-        } else {
-          targetDescription = `Example at line ${exampleLineNumber}`;
-        }
-        console.log(`Cucumber path (example): ${cucumberPath}`);
-      } else {
-        // Running/debugging a scenario
-        cucumberPath += ':' + lineNumber;
-
-        // Get the scenario line content
-        if (lineNumber <= lines.length) {
-          let scenarioContent = lines[lineNumber - 1].trim();
-          // Remove "Scenario:" or "Scenario Outline:" prefix if present
-          scenarioContent = scenarioContent.replace(/^(Scenario|Scenario Outline):\s*/i, '');
-          targetDescription = scenarioContent || `Scenario at line ${lineNumber}`;
-        } else {
-          targetDescription = `Scenario at line ${lineNumber}`;
-        }
-        console.log(`Cucumber path (scenario): ${cucumberPath}`);
-      }
-    } else {
-      // Get feature name from the file
-      const featureLine = lines.find(line => line.trim().startsWith('Feature:'));
-      if (featureLine) {
-        targetDescription = featureLine.trim().replace(/^Feature:\s*/i, '');
-      } else {
-        targetDescription = path.basename(featurePath, '.feature');
-      }
-      console.log(`Cucumber path (feature): ${cucumberPath}`);
-    }
-  } catch (error) {
-    console.error('Error reading feature file:', error);
-    // Fallback to simple descriptions
-    if (lineNumber && lineNumber > 0) {
-      if (exampleLineNumber && exampleLineNumber > 0) {
-        cucumberPath += ':' + exampleLineNumber;
-        targetDescription = `Example at line ${exampleLineNumber}`;
-      } else {
-        cucumberPath += ':' + lineNumber;
-        targetDescription = `Scenario at line ${lineNumber}`;
-      }
-    } else {
-      targetDescription = path.basename(featurePath, '.feature');
-    }
+  // Use batch mode with a single feature
+  const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
+  if (!workspaceFolder) {
+    vscode.window.showErrorMessage('Feature file is not inside a workspace.');
+    return { passed: false };
   }
 
-  configName += targetDescription;
+  const relativePath = path.relative(workspaceFolder.uri.fsPath, uri.fsPath);
+
+  return await runCucumberTestBatch(
+    [{
+      uri: uri,
+      relativePath: relativePath,
+      lineNumber: lineNumber,
+      exampleLine: exampleLine
+    }],
+    isDebug
+  );
+}
+
+/**
+ * Executes multiple Cucumber features in batch mode
+ * @returns TestExecutionResult with pass/fail status and result file path
+ */
+async function executeCucumberTestBatch(
+  projectRoot: string,
+  features: FeatureToRun[],
+  gluePaths: string[],
+  isDebug = false
+): Promise<TestExecutionResult> {
+  const configPrefix = isDebug ? 'Cucumber Debug: ' : 'Cucumber: ';
+
+  // Generate config name based on what's being run
+  let configName: string;
+  if (features.length === 1) {
+    const feature = features[0];
+    if (feature.exampleLine) {
+      configName = `${configPrefix}Example at line ${feature.exampleLine}`;
+    } else if (feature.lineNumber) {
+      configName = `${configPrefix}Scenario at line ${feature.lineNumber}`;
+    } else {
+      configName = `${configPrefix}${path.basename(feature.relativePath, '.feature')}`;
+    }
+  } else {
+    configName = `${configPrefix}All Features (${features.length} files)`;
+  }
 
   // Get workspace folder
   const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
@@ -170,27 +155,41 @@ async function executeCucumberTest(
   // Show progress while compiling and resolving dependencies
   const classPaths = await vscode.window.withProgress({
     location: vscode.ProgressLocation.Notification,
-    title: 'Compiling project and resolving dependencies...',
+    title: `Compiling project and resolving dependencies for ${features.length} feature(s)...`,
     cancellable: false
-  }, async () =>  await resolveMavenClasspath(projectRoot));
+  }, async () => await resolveMavenClasspath(projectRoot));
 
-    // Create a unique output file for the test results
-    const resultFile = path.join(projectRoot, 'target', `.cucumber-result-${Date.now()}.json`);
+  // Create a unique output file for the test results
+  const resultFile = path.join(projectRoot, 'target', `.cucumber-result-${Date.now()}.json`);
 
-    // Get custom object factory from workspace configuration
-    const config = vscode.workspace.getConfiguration('cucumberJavaRunner');
-    const customObjectFactory = config.get<string>('objectFactory');
-    // Build the arguments for Cucumber CLI with JSON plugin to capture results
-    const cucumberArgs = [
-      ...gluePaths.flatMap(gluePath => ['--glue', gluePath]),
-      '--plugin', 'pretty',
-      '--plugin', `json:${resultFile}`,
-      ...(customObjectFactory ? ['--object-factory', customObjectFactory] : []),
-      cucumberPath
-    ].join(' ');
+  // Get custom object factory from workspace configuration
+  const config = vscode.workspace.getConfiguration('cucumberJavaRunner');
+  const customObjectFactory = config.get<string>('objectFactory');
 
-    // Use VS Code debug API for both run and debug modes
-    return await runWithVSCode(workspaceFolder, configName, classPaths, cucumberArgs, projectRoot, resultFile, isDebug);
+  // Build the arguments for Cucumber CLI with all feature paths
+  const cucumberPaths = features.map(f => {
+    let cucumberPath = f.relativePath.replace(/\\/g, '/');
+
+    // Add line number if specified
+    if (f.exampleLine) {
+      cucumberPath += ':' + f.exampleLine;
+    } else if (f.lineNumber) {
+      cucumberPath += ':' + f.lineNumber;
+    }
+
+    return cucumberPath;
+  }).join(' ');
+
+  const cucumberArgs = [
+    ...gluePaths.flatMap(gluePath => ['--glue', gluePath]),
+    '--plugin', 'pretty',
+    '--plugin', `json:${resultFile}`,
+    ...(customObjectFactory ? ['--object-factory', customObjectFactory] : []),
+    cucumberPaths
+  ].join(' ');
+
+  // Use VS Code debug API for both run and debug modes
+  return await runWithVSCode(workspaceFolder, configName, classPaths, cucumberArgs, projectRoot, resultFile, isDebug);
 }
 
 /**

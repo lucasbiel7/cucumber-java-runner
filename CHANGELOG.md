@@ -2,9 +2,124 @@
 
 All notable changes to the Cucumber Java Runner extension will be documented in this file.
 
+## [1.0.10] - 2025-10-08
+
+### 🐛 Critical Bug Fix - Multiple Features Result Processing
+
+#### Fixed Result Matching Issues When Running Multiple Features
+
+**Problem:** When running multiple features simultaneously, results from one feature were being incorrectly applied to other features, causing:
+- Wrong scenarios marked as passed/failed
+- Error messages appearing in the wrong feature files
+- Error markers on incorrect lines
+- Cross-contamination of test results between features with similar names
+
+**Root Cause:** The path matching algorithm was too loose, using simple `endsWith()` checks that could match partial filenames (e.g., "login.feature" would match both "login.feature" and "user-login.feature").
+
+#### Improvements
+
+**1. Precise Path Matching Algorithm**
+- **New `isSameFeaturePath()` function**: Implements precise path matching with proper boundary checking
+- **Prevents false positives**: "login.feature" no longer matches "user-login.feature" or "admin-login.feature"
+- **Cross-platform support**: Handles Windows backslashes and Unix forward slashes
+- **Case-insensitive matching**: Works correctly regardless of path casing
+- **Validates filename first**: Ensures the actual filename matches before checking paths
+- **Path segment comparison**: Compares path segments to ensure full path ends with relative path
+
+**2. Enhanced Error Messages**
+- **Step failures**: Now include step keyword (Given, When, Then) in error message
+- **Hook failures**: Clearly labeled as "Before Hook Failed" or "After Hook Failed" with hook location
+- **Better error context**: Error messages include scenario name and line number for feature-level errors
+- **Precise location**: Errors point to exact line (step line for step failures, scenario line for hook/setup failures)
+
+**3. Improved Hook and Setup Error Handling**
+- **Before hooks**: Failures show at scenario line with "Before Hook Failed" message and hook location
+- **After hooks**: Failures show at scenario line with "After Hook Failed" message (unless step already failed)
+- **All steps skipped**: Clear message "All steps were skipped. Check for errors in @Before hooks or step definitions."
+- **Error prioritization**: Step failures take precedence over After hook failures for clarity
+
+**4. Enhanced Debug Mode**
+- **Path comparison logging**: See exactly which paths are being compared and matched
+- **Step-by-step execution**: Track each step's status (passed/failed/skipped)
+- **Scenario matching**: Verify scenarios are matched to correct test items
+- **Error location decisions**: Understand why errors appear at specific lines
+- **Feature URI listing**: See all available feature URIs when no match is found
+
+#### Technical Changes
+
+**Modified Functions:**
+- `parseResultFileForFeature()`: Uses new path matching, improved error detection, filters background elements
+- `markChildrenFromResults()`: Enhanced debug logging, better error formatting
+- `getTestErrorMessages()`: Includes scenario context in error messages
+- `hasFeatureFailures()`: Uses new path matching for accurate failure detection, filters background elements
+- `normalizePath()`: Now handles `file:` and `file://` URI prefixes from Cucumber JSON
+
+**New Functions:**
+- `isSameFeaturePath()`: Precise feature path matching with boundary checking
+
+**Critical Fixes:**
+- **Background Element Filtering**: JSON results include `type: "background"` elements that are not test scenarios. Now properly filtered out in all result processing functions to prevent incorrect scenario counting and marking.
+- **File URI Prefix Handling**: Cucumber JSON uses `file:` prefix in URIs (e.g., `file:src/test/resources/features/create.feature`). Added proper handling to strip these prefixes during path normalization and comparison.
+
+#### Testing
+
+All path matching scenarios verified:
+- ✓ Exact matches
+- ✓ Full path with relative path
+- ✓ Different features with similar names correctly distinguished
+- ✓ Windows and Unix path separators
+- ✓ Case-insensitive matching
+- ✓ Nested directory structures
+- ✓ Partial path matching (e.g., "auth/login.feature")
+
+#### Impact
+
+**Users will now experience:**
+- 100% accurate test results when running multiple features
+- Error messages in the correct feature files
+- Error markers on the exact failing lines
+- Clear distinction between hook failures and step failures
+- Better understanding of test failures with enhanced error context
+
+**Recommended Actions:**
+1. Enable debug mode if you experience any result matching issues: `"cucumberJavaRunner.debugMode": true`
+2. Check debug console output to verify path matching
+3. Result files are kept in `target/` directory when debug mode is enabled for inspection
+
+---
+
 ## [1.0.9] - 2025-10-07
 
+### 🚀 Performance Improvements
+
+#### Batch Test Execution
+- **Massive performance boost**: When running multiple features, they now execute in a single Cucumber process
+- **Eliminated redundant startups**: No more starting/stopping Cucumber for each feature file
+- **Smart execution mode**: Automatically detects when batch mode can be used
+- **Faster "Run All Tests"**: Running all tests is now significantly faster (single startup vs N startups)
+- **Optimized for CI/CD**: Batch execution is perfect for continuous integration pipelines
+
 ### 🐛 Critical Bug Fixes
+
+#### Fixed Infinite Loop in Test Explorer
+- **Fixed infinite loop** when running all tests from Test Explorer
+- **Eliminated duplicate test execution**: Features and their scenarios are no longer run separately
+- **Smart test filtering**: When a feature is selected, its child scenarios are automatically excluded from individual execution
+- **Proper line number extraction**: Test items now correctly extract scenario and example line numbers from their IDs
+- **Optimized test gathering**: When running all tests, only features are collected (not individual scenarios)
+
+#### Fixed Incorrect Test Status in Batch Mode
+- **Fixed batch execution marking all tests as failed**: When running multiple features, only features with actual failures are now marked as failed
+- **Individual feature validation**: Each feature is checked independently for failures in its scenarios
+- **Accurate pass/fail status**: Features that pass are correctly marked as passed, even when other features in the batch fail
+- **New `hasFeatureFailures` function**: Checks if a specific feature has any failures by matching feature URI in results
+
+#### Fixed Cross-Feature Scenario Matching Bug
+- **Fixed scenarios from different features being incorrectly marked**: Scenarios at the same line number in different features were incorrectly sharing results
+- **Exact feature path matching**: Now uses `endsWith()` comparison instead of `includes()` to prevent false matches (e.g., "login.feature" vs "user-login.feature")
+- **New `parseResultFileForFeature` function**: Filters results to only scenarios from a specific feature file
+- **Isolated feature results**: Each feature's scenarios are now processed independently, preventing cross-contamination
+- **Updated all result processing functions**: `markChildrenFromResults` and `getTestErrorMessages` now filter by feature URI first
 
 #### Fixed Race Condition in Test Result Processing
 - **Fixed crash during test execution** caused by reading result files before they were completely written
@@ -29,7 +144,25 @@ All notable changes to the Cucumber Java Runner extension will be documented in 
   - Hook/setup errors point to the scenario line (not individual steps)
   - Step errors point to the exact failed step line
 
+### 🛠️ Developer Tools
+
+#### Debug Mode for Troubleshooting
+- **New `debugMode` configuration**: Enable detailed logging and keep result JSON files for inspection
+- **Comprehensive logging**: Shows feature matching, scenario processing, and pass/fail decisions
+- **Result file preservation**: JSON files are kept in `target/` directory when debug mode is enabled
+- **Path matching details**: See exactly which features are being matched and why
+- **Scenario-level details**: View each scenario's status and error information in console
+
 ### 🔧 Technical Improvements
+
+#### Unified Batch Execution Architecture
+- **Simplified to single execution path**: All tests now use batch mode (even single tests)
+- **Eliminated code duplication**: Removed separate `executeSingleTest` and `executeCucumberTest` functions
+- **Unified `runCucumberTestBatch` function**: Handles single tests, scenarios, examples, and multiple features
+- **Easier maintenance**: Changes only need to be made in one place
+- **Consistent behavior**: Same execution logic for all test types
+- **Shared result processing**: Single JSON result file for all features in batch
+- **Optimized classpath resolution**: Compile and resolve dependencies once for all features
 
 #### Async Result Processing
 - **Made result processing fully asynchronous** to properly handle file I/O operations

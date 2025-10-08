@@ -2,7 +2,7 @@
   "name": "cucumber-java-runner",
   "displayName": "Cucumber Java Runner",
   "description": "VS Code extension for running Cucumber Feature files in Java projects",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "publisher": "lucasbiel7",
   "author": {
     "name": "lucasbiel7"
@@ -191,6 +191,12 @@
             "type": "string"
           },
           "markdownDescription": "Additional glue paths for Cucumber step definitions. Useful when using step definitions from external libraries or modules.\n\nExample:\n```json\n[\n  \"com.external.library.steps\",\n  \"org.another.library.cucumber.steps\"\n]\n```"
+        },
+        "cucumberJavaRunner.debugMode": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable debug mode to keep result JSON files and show detailed logs for troubleshooting.",
+          "order": 6
         }
       }
     }
