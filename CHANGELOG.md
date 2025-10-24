@@ -2,6 +2,33 @@
 
 All notable changes to the Cucumber Java Runner extension will be documented in this file.
 
+## [1.0.12] - 2025-10-24
+
+### 🔧 Performance Improvements
+
+#### Maven Incremental Compilation
+- **Optimized compilation strategy**: Removed manual `target` directory check in favor of Maven's built-in incremental compilation
+- **Always up-to-date**: Maven now automatically detects and compiles only changed files on every test run
+- **More reliable**: No longer skips compilation when files have changed but `target` directory exists
+- **Faster rebuilds**: Maven's incremental compilation is highly optimized and only recompiles what's necessary
+- **Simpler code**: Removed custom directory checking logic, letting Maven handle what it does best
+
+#### Technical Changes
+- **Modified `compileMavenProject()` function**: Removed `fs.existsSync(targetDir)` check
+- **Leverages Maven defaults**: Maven's `maven-compiler-plugin` uses incremental compilation by default
+- **Quiet mode**: Added `-q` flag to reduce log verbosity while maintaining compilation efficiency
+- **Better detection**: Maven compares timestamps of `.java` vs `.class` files automatically
+- **Handles edge cases**: Properly recompiles when dependencies change or `pom.xml` is updated
+
+#### Benefits
+- ✅ **No stale classes**: Always compiles when source files change
+- ✅ **Fast when unchanged**: Maven skips compilation when nothing changed
+- ✅ **Dependency aware**: Recompiles when dependencies are updated
+- ✅ **Less custom logic**: Simpler, more maintainable code
+- ✅ **Standard Maven behavior**: Uses Maven's proven incremental compilation
+
+---
+
 ## [1.0.11] - 2025-01-08
 
 ### 🔧 Refactoring - Structured Logging System

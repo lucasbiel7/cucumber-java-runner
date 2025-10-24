@@ -16,6 +16,12 @@ This is an enhanced version of the original [Cucumber Java Easy Runner](https://
 
 ### 🚀 Major Enhancements
 
+- **⚡ Maven Incremental Compilation (v1.0.12)**: Optimized build performance
+  - 🚀 **Always up-to-date**: Automatically detects and compiles only changed files
+  - ⏱️ **Faster rebuilds**: Maven's incremental compilation only recompiles what's necessary
+  - 🎯 **More reliable**: No longer skips compilation when source files have changed
+  - 🔧 **Simpler code**: Removed custom directory checking, leveraging Maven's built-in intelligence
+  - ✅ **Dependency aware**: Properly recompiles when dependencies or `pom.xml` changes
 - **📊 Structured Logging System (v1.0.11)**: Professional logging with configurable levels
   - 🎯 **Configurable log levels**: ERROR, WARN, INFO, DEBUG, TRACE - control verbosity via settings
   - 🔍 **Better troubleshooting**: Set `logLevel: "debug"` or `"trace"` for detailed diagnostics
@@ -49,7 +55,7 @@ This is an enhanced version of the original [Cucumber Java Easy Runner](https://
 - **📍 Precise Error Location**: Error markers appear on the exact line of the failed step, making debugging instant
 - **🎯 Detailed Error Messages**: See the exact step that failed with complete stack trace and error details
 - **🔍 Multiple Failure Support**: When multiple scenarios fail, each shows its specific error at the correct location
-- **⚡ Optimized Maven Compilation**: Only compiles when `target` folder doesn't exist (much faster execution) - now configurable!
+- **⚡ Smart Maven Compilation**: Uses Maven's incremental compilation to automatically detect and compile only changed files - now configurable!
 - **🐛 Debug & Run Modes**: Both modes now use the same unified approach with proper result tracking
 - **📝 JSON Result Analysis**: Uses Cucumber's JSON output to determine pass/fail status with detailed error messages
 - **🧹 Code Refactoring**: Consolidated duplicate code and extracted result processing into dedicated module
@@ -66,7 +72,7 @@ This is an enhanced version of the original [Cucumber Java Easy Runner](https://
 6. **Result File Analysis**: Uses `--plugin json:${resultFile}` to capture detailed test results
 7. **Dedicated Result Processor**: New `resultProcessor.ts` module handles all test result parsing and marking
 8. **Precise Line Matching**: Exact numeric comparison prevents false positives (e.g., line 5 vs line 57)
-9. **Smart Compilation**: Maven compilation only runs when needed (checks for `target` directory)
+9. **Smart Compilation**: Maven's incremental compilation automatically detects and compiles only changed files
 10. **Consolidated Methods**: Merged duplicate methods (`runTests`/`debugTests`, `runSingleTest`/`debugSingleTest`)
 11. **DRY Principles**: Eliminated code repetition throughout the codebase
 
@@ -348,7 +354,7 @@ If auto-detection fails, you'll be prompted to enter your glue path manually (e.
 ## 💡 How It Works
 
 1. **Test Discovery**: Scans workspace for `.feature` files
-2. **Auto-compilation**: Compiles Maven project only if `target` folder doesn't exist
+2. **Auto-compilation**: Uses Maven's incremental compilation to ensure code is up-to-date (compiles only changed files)
 3. **Test Execution**: Runs Cucumber with `--plugin json:${resultFile}` to capture results
 4. **Result Analysis**: Reads JSON output to determine pass/fail status for each scenario
 5. **UI Update**: Updates Test Explorer with ✅ (passed) or ❌ (failed) icons
@@ -382,9 +388,10 @@ If auto-detection fails, you'll be prompted to enter your glue path manually (e.
 - Update to latest version! This fork fixes that issue.
 - Make sure you're using version 1.0.0 or higher
 
-**Compilation is slow:**
-- This fork optimizes compilation! Only runs when `target` folder doesn't exist
-- Delete `target` folder to force recompilation when needed
+**Compilation issues:**
+- Version 1.0.12+ uses Maven's incremental compilation for optimal performance
+- Maven automatically detects and compiles only changed files
+- If you need a clean build, run `mvn clean` manually before running tests
 
 ## 🛠️ Development
 
@@ -413,7 +420,7 @@ cursor --install-extension cucumber-java-runner-1.0.0.vsix
 |---------|----------|-----------|
 | Test Results | Always "passed" ⚠️ | Real pass/fail status ✅ |
 | Individual Scenario Results | No ❌ | Yes ✅ |
-| Maven Compilation | Always runs 🐌 | Smart/optimized ⚡ |
+| Maven Compilation | Always runs 🐌 | Incremental (v1.0.12+) ⚡ |
 | Code Duplication | High 📚 | Low (refactored) 🎯 |
 | Debug Mode Results | No tracking ❌ | Full tracking ✅ |
 | Error Messages | Generic ⚠️ | Detailed with step info 📝 |
