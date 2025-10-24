@@ -9,7 +9,7 @@ import { logger } from './logger';
 
 /**
  * Compiles the Maven project before running tests
- * Only compiles if the target directory doesn't exist and autoCompileMaven is enabled
+ * Uses Maven's incremental compilation to only compile changed files
  */
 async function compileMavenProject(projectRoot: string): Promise<boolean> {
   // Check if auto-compilation is enabled
@@ -21,19 +21,12 @@ async function compileMavenProject(projectRoot: string): Promise<boolean> {
     return true;
   }
 
-  const targetDir = path.join(projectRoot, 'target');
-
-  // Check if target directory exists
-  if (fs.existsSync(targetDir)) {
-    logger.debug('Target directory exists, skipping compilation');
-    return true;
-  }
-
   return new Promise((resolve) => {
-    // Execute Maven compile without clean to avoid unnecessary rebuilds
-    const command = 'mvn compile test-compile';
+    // Execute Maven compile with incremental compilation
+    // Maven will automatically detect and compile only changed files
+    const command = 'mvn compile test-compile -Dmaven.compiler.useIncrementalCompilation=true -q';
 
-    logger.info('Target directory not found. Compiling Maven project...');
+    logger.info('Ensuring Maven project is compiled (incremental)...');
 
     exec(command, { cwd: projectRoot }, (error, stdout, stderr) => {
       if (error) {
@@ -44,7 +37,7 @@ async function compileMavenProject(projectRoot: string): Promise<boolean> {
         return;
       }
 
-      logger.info('Maven project compiled successfully');
+      logger.info('Maven project compilation completed');
       if (stdout) {
         logger.debug('Maven output:', stdout);
       }
