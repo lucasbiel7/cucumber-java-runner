@@ -44,7 +44,29 @@ export function activate(context: vscode.ExtensionContext) {
       codeLensProvider
     );
     context.subscriptions.push(codeLensDisposable);
-    logger.info('CodeLens provider registered');
+
+    // Debounce timer for CodeLens refresh (1200ms delay after user stops typing)
+    let codeLensRefreshTimer: NodeJS.Timeout | undefined;
+
+    // Listen for document changes to refresh CodeLens with debounce
+    const documentChangeListener = vscode.workspace.onDidChangeTextDocument(event => {
+      if (path.extname(event.document.uri.fsPath) === '.feature') {
+        // Clear existing timer
+        if (codeLensRefreshTimer) {
+          clearTimeout(codeLensRefreshTimer);
+        }
+
+        // Set new timer - refresh only after user stops typing for 1200ms
+        codeLensRefreshTimer = setTimeout(() => {
+          logger.trace('CodeLens refresh triggered after debounce');
+          codeLensProvider.refresh();
+          codeLensRefreshTimer = undefined;
+        }, 1200);
+      }
+    });
+    context.subscriptions.push(documentChangeListener);
+
+    logger.info('CodeLens provider registered with auto-refresh (1200ms debounce)');
   } else {
     logger.info('CodeLens disabled - use Test Explorer instead');
   }

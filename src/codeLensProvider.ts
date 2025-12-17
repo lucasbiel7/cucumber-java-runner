@@ -8,6 +8,16 @@ import * as path from 'path';
  * CodeLens provider for Cucumber feature files - with compact buttons
  */
 export class CucumberCodeLensProvider implements vscode.CodeLensProvider {
+  private _onDidChangeCodeLenses: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
+  public readonly onDidChangeCodeLenses: vscode.Event<void> = this._onDidChangeCodeLenses.event;
+
+  /**
+   * Refresh CodeLenses when document changes
+   */
+  public refresh(): void {
+    this._onDidChangeCodeLenses.fire();
+  }
+
   provideCodeLenses(document: vscode.TextDocument): vscode.CodeLens[] {
     const codeLenses: vscode.CodeLens[] = [];
 

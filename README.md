@@ -16,6 +16,13 @@ This is an enhanced version of the original [Cucumber Java Easy Runner](https://
 
 ### 🚀 Major Enhancements
 
+- **🔄 Real-time Feature File Updates (v1.0.13)**: Live test discovery without reloading
+  - ✨ **Auto-refresh on save**: Test Explorer updates automatically when you save `.feature` files
+  - 🎯 **No manual refresh needed**: See new scenarios appear instantly after saving
+  - ⚡ **Smart debouncing**: 1200ms delay prevents excessive updates during rapid editing
+  - 🔋 **Battery-friendly**: Optimized to avoid CPU waste while typing
+  - 📝 **CodeLens support**: Run/debug buttons also refresh automatically (if enabled)
+  - 🎨 **Smooth workflow**: Keep coding without interruptions to reload the window
 - **⚡ Maven Incremental Compilation (v1.0.12)**: Optimized build performance
   - 🚀 **Always up-to-date**: Automatically detects and compiles only changed files
   - ⏱️ **Faster rebuilds**: Maven's incremental compilation only recompiles what's necessary
@@ -87,7 +94,8 @@ This is an enhanced version of the original [Cucumber Java Easy Runner](https://
 - 📊 **Detailed Results**: See which scenarios passed and which failed, with error details
 - 🔄 **Auto-discovery**: Automatically finds and displays all feature files in your workspace
 - 🚫 **Smart Filtering**: Excludes build directories (target, build, out) to prevent duplicate tests
-- ⚡ **Fast Refresh**: Instantly refresh test list when new features are added
+- ⚡ **Live Updates**: Test Explorer refreshes automatically when you save feature files (no reload needed!)
+- 🔄 **Smart Debouncing**: Updates are optimized with 1200ms delay to prevent performance issues
 - 🔧 **Auto-configuration**: Automatically detects glue path, no manual setup required
 - 📋 **Optional CodeLens**: Enable traditional play buttons in feature files if preferred
 

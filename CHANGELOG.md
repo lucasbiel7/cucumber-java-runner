@@ -2,6 +2,47 @@
 
 All notable changes to the Cucumber Java Runner extension will be documented in this file.
 
+## [1.0.13] - 2024-12-17
+
+### 🐛 Bug Fixes
+
+#### Real-time Feature File Updates with Performance Optimization
+- **Fixed live update detection**: Feature files now update in real-time without requiring a window reload
+- **Test Explorer auto-refresh**: When editing `.feature` files, test items in the Test Explorer now update automatically
+- **CodeLens auto-refresh**: Run/debug buttons (CodeLens) now refresh automatically when feature content changes
+- **Improved file watcher**: Enhanced the file change handler to properly update existing test items instead of ignoring changes
+- **Better user experience**: No more need to reload the window or manually refresh to see new scenarios or changes
+
+#### Performance Optimizations
+- **Smart debouncing**: Updates are debounced to avoid excessive processing during rapid typing
+  - **Test Explorer**: 1200ms debounce on file changes - updates only after you stop editing
+  - **CodeLens**: 1200ms debounce on document changes - refreshes only after you pause typing
+- **Efficient updates**: Multiple rapid changes are batched into a single update operation
+- **Resource-friendly**: No CPU waste processing every keystroke
+- **Smooth editing**: No lag or slowdown while typing in feature files
+- **Balanced timing**: 1200ms provides good balance between responsiveness and resource efficiency
+
+#### Technical Changes
+- **Modified `createOrUpdateTest()` in `testController.ts`**: Now removes and recreates test items when files change instead of skipping updates
+- **Added debounce mechanism**: Implemented timer-based debouncing for both Test Explorer and CodeLens updates
+- **Added `updateTimers` map**: Tracks pending updates per file to prevent duplicate processing
+- **Added `onDidSaveTextDocument` listener**: More reliable detection of file saves in open editors (complements FileSystemWatcher)
+- **Added `onDidChangeCodeLenses` event**: CodeLens provider now implements proper change notification
+- **Document change listener**: Added `onDidChangeTextDocument` listener with 1200ms debounce for CodeLens refresh
+- **Enhanced logging**: Added detailed trace and debug logs for troubleshooting update detection
+- **Proper cleanup**: All timers are cleared when the extension is disposed to prevent memory leaks
+- **Eliminated stale state**: Test items and CodeLens buttons now always reflect the current file content
+
+#### Benefits
+- ✅ **Instant feedback**: See test buttons appear as you write new scenarios (after brief pause)
+- ✅ **No manual refresh needed**: Extension automatically detects and updates changes
+- ✅ **Smoother workflow**: Keep coding without interruptions to reload the window
+- ✅ **Accurate test structure**: Test Explorer always shows the current file structure
+- ✅ **No performance impact**: Debouncing ensures updates happen only when needed
+- ✅ **Battery-friendly**: Reduced CPU usage during editing sessions
+
+---
+
 ## [1.0.12] - 2025-10-24
 
 ### 🔧 Performance Improvements

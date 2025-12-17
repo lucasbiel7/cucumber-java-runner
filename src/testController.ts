@@ -14,6 +14,7 @@ import { logger } from './logger';
 export class CucumberTestController {
   private readonly controller: vscode.TestController;
   private readonly watchedFiles = new Map<string, vscode.TestItem>();
+  private readonly updateTimers = new Map<string, NodeJS.Timeout>();
 
   constructor(context: vscode.ExtensionContext) {
     this.controller = vscode.tests.createTestController('cucumberJavaRunner', 'Cucumber Java Tests');
@@ -31,6 +32,15 @@ export class CucumberTestController {
     watcher.onDidCreate(uri => this.handleFileEvent('create', uri));
     watcher.onDidChange(uri => this.handleFileEvent('change', uri));
     watcher.onDidDelete(uri => this.handleFileEvent('delete', uri));
+
+    // Also listen for document saves (more reliable than file watcher for open files)
+    const saveListener = vscode.workspace.onDidSaveTextDocument(document => {
+      if (path.extname(document.uri.fsPath) === '.feature') {
+        logger.debug('Document saved, triggering update:', document.uri.fsPath);
+        this.handleFileEvent('change', document.uri);
+      }
+    });
+    context.subscriptions.push(saveListener);
 
     // Set up test run handler
     this.controller.createRunProfile(
@@ -82,10 +92,24 @@ export class CucumberTestController {
     if (eventType === 'delete') {
       this.deleteTest(uri);
     } else {
-      // Add small delay to ensure file is fully written
-      setTimeout(() => {
+      // Use debounce to avoid excessive updates during rapid file changes
+      const fileKey = path.normalize(uri.fsPath);
+      const existingTimer = this.updateTimers.get(fileKey);
+
+      if (existingTimer) {
+        logger.trace(`Clearing existing timer for: ${uri.fsPath}`);
+        clearTimeout(existingTimer);
+      }
+
+      // Debounce: wait 1200ms after last change before updating
+      logger.trace(`Setting debounce timer (1200ms) for: ${uri.fsPath}`);
+      const timer = setTimeout(() => {
+        logger.debug(`Test update triggered after debounce for: ${uri.fsPath}`);
         this.createOrUpdateTest(uri);
-      }, 100);
+        this.updateTimers.delete(fileKey);
+      }, 1200);
+
+      this.updateTimers.set(fileKey, timer);
     }
   }
 
@@ -125,20 +149,26 @@ export class CucumberTestController {
 
   private async createOrUpdateTest(uri: vscode.Uri) {
     try {
+      logger.debug('createOrUpdateTest called for:', uri.fsPath);
       const document = await vscode.workspace.openTextDocument(uri);
       const featureInfo = parseFeatureFile(document);
 
       if (!featureInfo) {
+        logger.debug('No feature info found for:', uri.fsPath);
         return;
       }
 
       // Create unique feature ID using normalized file path
       const featureId = path.normalize(uri.fsPath);
 
-      // Check if feature already exists
-      if (this.watchedFiles.has(featureId)) {
-        logger.trace('Feature already exists:', featureId);
-        return;
+      // Check if feature already exists - if so, remove it first to update
+      const existingFeature = this.watchedFiles.get(featureId);
+      if (existingFeature) {
+        logger.info('Updating existing feature:', featureId);
+        this.controller.items.delete(featureId);
+        this.watchedFiles.delete(featureId);
+      } else {
+        logger.info('Creating new feature:', featureId);
       }
 
       const featureItem = this.controller.createTestItem(featureId, featureInfo.name, uri);
@@ -188,7 +218,8 @@ export class CucumberTestController {
         }
       }
 
-      logger.debug(`Added feature: ${featureInfo.name} with ${featureInfo.scenarios.length} scenarios`);
+      const action = existingFeature ? 'Updated' : 'Added';
+      logger.debug(`${action} feature: ${featureInfo.name} with ${featureInfo.scenarios.length} scenarios`);
 
     } catch (error) {
       logger.error('Error parsing feature file:', error);
@@ -388,6 +419,12 @@ export class CucumberTestController {
   }
 
   dispose() {
+    // Clear all pending timers
+    for (const timer of this.updateTimers.values()) {
+      clearTimeout(timer);
+    }
+    this.updateTimers.clear();
+
     this.controller.dispose();
     this.watchedFiles.clear();
   }
