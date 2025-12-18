@@ -5,69 +5,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import { logger } from './logger';
-
-/**
- * Waits for a file to be completely written and contain valid JSON
- * @param filePath Path to the file
- * @param maxAttempts Maximum number of attempts (default: 20)
- * @param delayMs Delay between attempts in milliseconds (default: 500)
- * @returns true if file is valid, false otherwise
- */
-async function waitForValidJsonFile(filePath: string, maxAttempts = 20, delayMs = 500): Promise<boolean> {
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      // Check if file exists
-      if (!fs.existsSync(filePath)) {
-        logger.trace(`Attempt ${attempt}/${maxAttempts}: File does not exist yet:`, filePath);
-        await new Promise(resolve => setTimeout(resolve, delayMs));
-        continue;
-      }
-
-      // Check if file has content
-      const stats = fs.statSync(filePath);
-      if (stats.size === 0) {
-        logger.trace(`Attempt ${attempt}/${maxAttempts}: File is empty:`, filePath);
-        await new Promise(resolve => setTimeout(resolve, delayMs));
-        continue;
-      }
-
-      // Try to read and parse JSON
-      const fileContent = fs.readFileSync(filePath, 'utf-8');
-
-      // Check if content is not just whitespace
-      if (fileContent.trim().length === 0) {
-        logger.trace(`Attempt ${attempt}/${maxAttempts}: File contains only whitespace`);
-        await new Promise(resolve => setTimeout(resolve, delayMs));
-        continue;
-      }
-
-      // Try to parse JSON
-      const jsonData = JSON.parse(fileContent);
-
-      // Validate that it's an array (Cucumber JSON format)
-      if (!Array.isArray(jsonData)) {
-        logger.trace(`Attempt ${attempt}/${maxAttempts}: JSON is not an array`);
-        await new Promise(resolve => setTimeout(resolve, delayMs));
-        continue;
-      }
-
-      // If we got here, file is valid
-      logger.debug(`File is valid JSON after ${attempt} attempt(s)`);
-      return true;
-
-    } catch (error) {
-      // JSON parse error or read error - file might still be being written
-      logger.trace(`Attempt ${attempt}/${maxAttempts}: Error reading/parsing file - ${error instanceof Error ? error.message : 'Unknown error'}`);
-
-      if (attempt < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, delayMs));
-      }
-    }
-  }
-
-  logger.error(`Failed to get valid JSON file after ${maxAttempts} attempts`);
-  return false;
-}
+import { waitForValidJsonFile } from './resultFileUtils';
 
 /**
  * Represents a failed step with details

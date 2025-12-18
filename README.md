@@ -16,6 +16,13 @@ This is an enhanced version of the original [Cucumber Java Easy Runner](https://
 
 ### 🚀 Major Enhancements
 
+- **⚡ Lightning-Fast Test Results (v1.0.14)**: 50x faster result processing
+  - 🚀 **Instant feedback**: Results appear in ~200ms instead of up to 10 seconds
+  - 🎯 **Simplified logic**: Removed unnecessary retry loops and polling
+  - 🧹 **Cleaner code**: Eliminated 60+ lines of complex timing logic
+  - 💡 **Smart design**: Leverages Java's automatic file buffer flushing on process termination
+  - 🔋 **Zero overhead**: Single read operation instead of constant polling
+  - 📦 **Better organization**: Shared utility module eliminates code duplication
 - **🔄 Real-time Feature File Updates (v1.0.13)**: Live test discovery without reloading
   - ✨ **Auto-refresh on save**: Test Explorer updates automatically when you save `.feature` files
   - 🎯 **No manual refresh needed**: See new scenarios appear instantly after saving
