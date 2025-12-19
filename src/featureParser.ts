@@ -6,6 +6,141 @@ import { FeatureInfo, ScenarioInfo } from './types';
 import { logger } from './logger';
 
 /**
+ * Parser context - maintains state during parsing
+ */
+class ParserContext {
+  featureName = '';
+  featureLineNumber = 0;
+  scenarios: ScenarioInfo[] = [];
+  currentScenario: ScenarioInfo | null = null;
+  isScenarioOutline = false;
+  inExamplesSection = false;
+  examplesHeaderLine = -1;
+
+  reset(): void {
+    this.featureName = '';
+    this.featureLineNumber = 0;
+    this.scenarios = [];
+    this.currentScenario = null;
+    this.isScenarioOutline = false;
+    this.inExamplesSection = false;
+    this.examplesHeaderLine = -1;
+  }
+
+  startScenario(name: string, lineNumber: number, isOutline: boolean): void {
+    this.currentScenario = {
+      name: isOutline ? `${name} (Outline)` : name,
+      lineNumber,
+      examples: []
+    };
+    this.scenarios.push(this.currentScenario);
+    this.isScenarioOutline = isOutline;
+    this.inExamplesSection = false;
+    this.examplesHeaderLine = -1;
+  }
+
+  startExamplesSection(): void {
+    this.inExamplesSection = true;
+    this.examplesHeaderLine = -1;
+  }
+
+  addExampleRow(lineNumber: number, data: string): void {
+    if (this.currentScenario && this.currentScenario.examples) {
+      this.currentScenario.examples.push({ lineNumber, data });
+    }
+  }
+}
+
+/**
+ * Line handler interface
+ */
+interface LineHandler {
+  canHandle(line: string): boolean;
+  handle(line: string, lineNumber: number, context: ParserContext): void;
+}
+
+/**
+ * Handles Feature: lines
+ */
+class FeatureLineHandler implements LineHandler {
+  canHandle(line: string): boolean {
+    return line.startsWith('Feature:');
+  }
+
+  handle(line: string, lineNumber: number, context: ParserContext): void {
+    context.featureName = line.substring(8).trim();
+    context.featureLineNumber = lineNumber;
+  }
+}
+
+/**
+ * Handles Scenario: lines
+ */
+class ScenarioLineHandler implements LineHandler {
+  canHandle(line: string): boolean {
+    return line.startsWith('Scenario:');
+  }
+
+  handle(line: string, lineNumber: number, context: ParserContext): void {
+    const scenarioName = line.substring(9).trim();
+    context.startScenario(scenarioName, lineNumber, false);
+  }
+}
+
+/**
+ * Handles Scenario Outline: lines
+ */
+class ScenarioOutlineLineHandler implements LineHandler {
+  canHandle(line: string): boolean {
+    return line.startsWith('Scenario Outline:');
+  }
+
+  handle(line: string, lineNumber: number, context: ParserContext): void {
+    const scenarioName = line.substring(17).trim();
+    context.startScenario(scenarioName, lineNumber, true);
+  }
+}
+
+/**
+ * Handles Examples: lines
+ */
+class ExamplesLineHandler implements LineHandler {
+  canHandle(line: string): boolean {
+    return line.startsWith('Examples:');
+  }
+
+  handle(line: string, lineNumber: number, context: ParserContext): void {
+    if (context.isScenarioOutline) {
+      context.startExamplesSection();
+    }
+  }
+}
+
+/**
+ * Handles table lines (|)
+ */
+class TableLineHandler implements LineHandler {
+  canHandle(line: string): boolean {
+    return line.startsWith('|');
+  }
+
+  handle(line: string, lineNumber: number, context: ParserContext): void {
+    // Only process if we're in a Scenario Outline and inside Examples section
+    if (!context.currentScenario || !context.isScenarioOutline || !context.inExamplesSection) {
+      return;
+    }
+
+    // First | line after Examples: is the header
+    if (context.examplesHeaderLine === -1) {
+      context.examplesHeaderLine = lineNumber - 1; // Store as 0-indexed
+    } else {
+      // This is a data row (not the header)
+      context.addExampleRow(lineNumber, line);
+    }
+  }
+}
+
+/**
  * Finds example row info
  */
 export function findExampleRowInfo(lines: string[], currentLine: number): { scenarioLine: number } | null {
@@ -56,55 +191,37 @@ export function findExampleRowInfo(lines: string[], currentLine: number): { scen
 export function parseFeatureFile(document: vscode.TextDocument): FeatureInfo | null {
   const text = document.getText();
   const lines = text.split('\n');
+  const context = new ParserContext();
 
-  let featureName = '';
-  let featureLineNumber = 0;
-  const scenarios: ScenarioInfo[] = [];
-  let currentScenario: ScenarioInfo | null = null;
+  const handlers: LineHandler[] = [
+    new FeatureLineHandler(),
+    new ScenarioOutlineLineHandler(), // Must come before ScenarioLineHandler
+    new ScenarioLineHandler(),
+    new ExamplesLineHandler(),
+    new TableLineHandler()
+  ];
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
+    const lineNumber = i + 1; // 1-indexed
 
-    if (line.startsWith('Feature:')) {
-      featureName = line.substring(8).trim();
-      featureLineNumber = i + 1;
-    } else if (line.startsWith('Scenario:')) {
-      const scenarioName = line.substring(9).trim();
-      currentScenario = {
-        name: scenarioName,
-        lineNumber: i + 1,
-        examples: []
-      };
-      scenarios.push(currentScenario);
-    } else if (line.startsWith('Scenario Outline:')) {
-      const scenarioName = line.substring(17).trim();
-      currentScenario = {
-        name: `${scenarioName} (Outline)`,
-        lineNumber: i + 1,
-        examples: []
-      };
-      scenarios.push(currentScenario);
-    } else if (line.startsWith('|') && currentScenario && i > 0) {
-      // Check if this is an example row (not header)
-      const exampleInfo = findExampleRowInfo(lines, i);
-      if (exampleInfo && currentScenario.examples) {
-        currentScenario.examples.push({
-          lineNumber: i + 1,
-          data: line
-        });
+    for (const handler of handlers) {
+      if (handler.canHandle(line)) {
+        handler.handle(line, lineNumber, context);
+        break; // Only one handler per line
       }
     }
   }
 
-  if (!featureName) {
+  if (!context.featureName) {
     return null;
   }
 
   return {
-    name: featureName,
-    scenarios,
+    name: context.featureName,
+    scenarios: context.scenarios,
     filePath: document.uri.fsPath,
-    lineNumber: featureLineNumber
+    lineNumber: context.featureLineNumber
   };
 }
 

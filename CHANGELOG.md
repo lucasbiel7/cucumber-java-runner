@@ -6,6 +6,58 @@ All notable changes to the Cucumber Java Runner extension will be documented in 
 
 ---
 
+## [1.0.15] - 2024-12-19
+
+### 🐛 Bug Fixes
+
+#### Fixed Scenario Outline Example Detection
+- **Fixed DataTable vs Examples confusion**: The parser was incorrectly treating ALL table rows (lines starting with `|`) as executable examples
+- **Problem identified**: DataTables used in step definitions were being marked as executable tests, causing incorrect test counts in Test Explorer
+- **Root cause**: Parser didn't distinguish between:
+  - DataTables within steps (not executable)
+  - Examples table header row (not executable)
+  - Examples table data rows (executable)
+- **Solution**: Only data rows under `Examples:` section in `Scenario Outline` are now treated as executable examples
+
+#### Technical Changes
+- **Modified `parseFeatureFile()` in `featureParser.ts`**: Added state tracking to properly identify Examples sections
+- **New state variables**:
+  - `isScenarioOutline`: Tracks if we're in a Scenario Outline (not a regular Scenario)
+  - `inExamplesSection`: Tracks if we're inside an Examples: section
+  - `examplesHeaderLine`: Tracks the header row to skip it
+- **Validation logic**: Table rows are only processed as examples when:
+  1. Inside a Scenario Outline (not a regular Scenario)
+  2. Inside an Examples: section
+  3. After the header row (first `|` line is the header)
+
+#### Benefits
+- ✅ **Accurate test counts**: Test Explorer now shows only actual executable examples
+- ✅ **No false positives**: DataTables in steps are correctly ignored
+- ✅ **Cleaner test structure**: Only real test cases appear in the test tree
+- ✅ **Better user experience**: No confusion about which rows are executable
+
+### 🔧 Code Quality Improvements
+
+#### Feature Parser Refactoring
+- **Applied Chain of Responsibility pattern**: Replaced monolithic parsing function with specialized handlers
+- **New architecture**:
+  - `ParserContext` class: Encapsulates all parsing state with helper methods
+  - `LineHandler` interface: Defines contract for line processing
+  - 5 specialized handlers: `FeatureLineHandler`, `ScenarioLineHandler`, `ScenarioOutlineLineHandler`, `ExamplesLineHandler`, `TableLineHandler`
+- **Improved maintainability**: Each handler has a single, clear responsibility
+- **Easier to extend**: Adding support for new Gherkin keywords is now trivial
+- **Better testability**: Each handler can be tested in isolation
+- **Cleaner code**: Reduced complexity from nested if-else chains to clean handler pattern
+
+#### Technical Benefits
+- ✅ **Single Responsibility Principle**: Each class has one clear purpose
+- ✅ **Open/Closed Principle**: Easy to extend without modifying existing code
+- ✅ **Improved readability**: `parseFeatureFile()` is now simple and declarative
+- ✅ **Better separation of concerns**: State management separate from parsing logic
+- ✅ **Reduced cyclomatic complexity**: No more deeply nested conditionals
+
+---
+
 ## [1.0.14] - 2024-12-18
 
 ### 🚀 Performance Improvements
