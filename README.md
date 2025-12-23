@@ -23,6 +23,11 @@ This is an enhanced version of the original [Cucumber Java Easy Runner](https://
   - 💡 **Smart design**: Leverages Java's automatic file buffer flushing on process termination
   - 🔋 **Zero overhead**: Single read operation instead of constant polling
   - 📦 **Better organization**: Shared utility module eliminates code duplication
+- **📏 Gherkin Rule Support (v1.0.16)**: Full support for the `Rule` keyword
+  - 🧩 **Hierarchical View**: Rules appear in Test Explorer with their scenarios nested correctly
+  - ▶️ **Run/Debug Rules**: Execute all scenarios within a specific Rule with a single click
+  - 📝 **CodeLens Integration**: dedicated Play/Debug buttons for Rule lines
+  - 🔄 **Smart Results**: Test results are correctly tracked for scenarios nested inside Rules
 - **🔄 Real-time Feature File Updates (v1.0.13)**: Live test discovery without reloading
   - ✨ **Auto-refresh on save**: Test Explorer updates automatically when you save `.feature` files
   - 🎯 **No manual refresh needed**: See new scenarios appear instantly after saving
