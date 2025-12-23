@@ -472,15 +472,10 @@ export async function markChildrenFromResults(
     logger.debug(`Result lines: ${scenarioResults.map(r => r.line).join(', ')}`);
 
     // Find the corresponding test items and mark them
-    for (const scenarioResult of scenarioResults) {
-      logger.debug(`Processing result for scenario "${scenarioResult.name}" at line ${scenarioResult.line}`);
-
-      let matched = false;
-
-      featureItem.children.forEach(child => {
-        // Check if this child matches the scenario line - must be exact match
+    const updateItemsRecursively = (items: vscode.TestItemCollection) => {
+      items.forEach(child => {
+        // Check if this child matches a scenario (Scenario or Example)
         // The ID format is: path:scenario:LINE or path:scenario:LINE:example:EXAMPLELINE
-        // We need to ensure we match exactly ":scenario:5" and not ":scenario:57"
         const childIdParts = child.id.split(':scenario:');
         if (childIdParts.length > 1) {
           // Extract the line number part after :scenario:
@@ -489,9 +484,10 @@ export async function markChildrenFromResults(
 
           logger.debug(`Checking child "${child.label}" with scenario line ${childScenarioLine}`);
 
-          if (childScenarioLine === scenarioResult.line) {
-            matched = true;
+          // Find matching result
+          const scenarioResult = scenarioResults.find(r => r.line === childScenarioLine);
 
+          if (scenarioResult) {
             logger.debug(`MATCHED! Marking as ${scenarioResult.passed ? 'PASSED' : 'FAILED'}`);
 
             if (scenarioResult.passed) {
@@ -515,14 +511,12 @@ export async function markChildrenFromResults(
                     child.uri,
                     new vscode.Position(scenarioResult.line - 1, 0)
                   );
-                  logger.debug(`Error location: scenario line ${scenarioResult.line}`);
                 } else {
                   // For step-level errors, point to the failed step line
                   message.location = new vscode.Location(
                     child.uri,
                     new vscode.Position(scenarioResult.failedStep.line - 1, 0)
                   );
-                  logger.debug(`Error location: step line ${scenarioResult.failedStep.line}`);
                 }
               }
               run.failed(child, message);
@@ -532,12 +526,16 @@ export async function markChildrenFromResults(
             }
           }
         }
-      });
 
-      if (!matched) {
-        logger.debug(`WARNING: No matching child found for scenario at line ${scenarioResult.line}`);
-      }
-    }
+        // Recursively check children (e.g. Scenarios inside Rules, or Examples inside Scenarios)
+        if (child.children.size > 0) {
+          updateItemsRecursively(child.children);
+        }
+      });
+    };
+
+    updateItemsRecursively(featureItem.children);
+
   } catch (error) {
     logger.error('Error marking children from results:', error);
   }

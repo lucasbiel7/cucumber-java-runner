@@ -113,7 +113,7 @@ function registerCommands(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand('cucumberJavaRunner.runScenarioCodeLens', async (uri: vscode.Uri, lineNumber: number) => {
       logger.debug('runScenarioCodeLensCommand called - URI:', uri.toString(), 'line:', lineNumber);
-      vscode.window.showInformationMessage(`Scenario test starting at line ${lineNumber}...`);
+      vscode.window.showInformationMessage(`Test starting at line ${lineNumber}...`);
       runCucumberTest(uri, lineNumber, undefined, false);
     })
   );
@@ -222,7 +222,7 @@ function registerCommands(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand('cucumberJavaRunner.debugScenarioCodeLens', async (uri: vscode.Uri, lineNumber: number) => {
       logger.debug('debugScenarioCodeLensCommand called - URI:', uri.toString(), 'line:', lineNumber);
-      vscode.window.showInformationMessage(`Scenario debug starting at line ${lineNumber}...`);
+      vscode.window.showInformationMessage(`Debug starting at line ${lineNumber}...`);
       runCucumberTest(uri, lineNumber, undefined, true);
     })
   );

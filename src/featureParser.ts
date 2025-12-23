@@ -2,7 +2,7 @@
  * Feature file parser - parses .feature files to extract scenarios and examples
  */
 import * as vscode from 'vscode';
-import { FeatureInfo, ScenarioInfo } from './types';
+import { FeatureInfo, ScenarioInfo, RuleInfo } from './types';
 import { logger } from './logger';
 
 /**
@@ -11,7 +11,9 @@ import { logger } from './logger';
 class ParserContext {
   featureName = '';
   featureLineNumber = 0;
-  scenarios: ScenarioInfo[] = [];
+  scenarios: ScenarioInfo[] = []; // Scenarios directly under Feature
+  rules: RuleInfo[] = [];
+  currentRule: RuleInfo | null = null;
   currentScenario: ScenarioInfo | null = null;
   isScenarioOutline = false;
   inExamplesSection = false;
@@ -21,10 +23,23 @@ class ParserContext {
     this.featureName = '';
     this.featureLineNumber = 0;
     this.scenarios = [];
+    this.rules = [];
+    this.currentRule = null;
     this.currentScenario = null;
     this.isScenarioOutline = false;
     this.inExamplesSection = false;
     this.examplesHeaderLine = -1;
+  }
+
+  startRule(name: string, lineNumber: number): void {
+    this.currentRule = {
+      name,
+      lineNumber,
+      scenarios: []
+    };
+    this.rules.push(this.currentRule);
+    // Reset current scenario as we are entering a new rule
+    this.currentScenario = null;
   }
 
   startScenario(name: string, lineNumber: number, isOutline: boolean): void {
@@ -33,7 +48,13 @@ class ParserContext {
       lineNumber,
       examples: []
     };
-    this.scenarios.push(this.currentScenario);
+
+    if (this.currentRule) {
+      this.currentRule.scenarios.push(this.currentScenario);
+    } else {
+      this.scenarios.push(this.currentScenario);
+    }
+
     this.isScenarioOutline = isOutline;
     this.inExamplesSection = false;
     this.examplesHeaderLine = -1;
@@ -70,6 +91,20 @@ class FeatureLineHandler implements LineHandler {
   handle(line: string, lineNumber: number, context: ParserContext): void {
     context.featureName = line.substring(8).trim();
     context.featureLineNumber = lineNumber;
+  }
+}
+
+/**
+ * Handles Rule: lines
+ */
+class RuleLineHandler implements LineHandler {
+  canHandle(line: string): boolean {
+    return line.startsWith('Rule:');
+  }
+
+  handle(line: string, lineNumber: number, context: ParserContext): void {
+    const ruleName = line.substring(5).trim();
+    context.startRule(ruleName, lineNumber);
   }
 }
 
@@ -195,6 +230,7 @@ export function parseFeatureFile(document: vscode.TextDocument): FeatureInfo | n
 
   const handlers: LineHandler[] = [
     new FeatureLineHandler(),
+    new RuleLineHandler(), // Add Rule handler
     new ScenarioOutlineLineHandler(), // Must come before ScenarioLineHandler
     new ScenarioLineHandler(),
     new ExamplesLineHandler(),
@@ -220,6 +256,7 @@ export function parseFeatureFile(document: vscode.TextDocument): FeatureInfo | n
   return {
     name: context.featureName,
     scenarios: context.scenarios,
+    rules: context.rules,
     filePath: document.uri.fsPath,
     lineNumber: context.featureLineNumber
   };
@@ -238,6 +275,12 @@ export function findScenarioAtLine(document: vscode.TextDocument, line: number):
     if (currentLine.startsWith('Scenario:') || currentLine.startsWith('Scenario Outline:')) {
       const name = currentLine.substring(currentLine.indexOf(':') + 1).trim();
       return { name, lineNumber: i + 1 }; // 1-indexed line number for Cucumber
+    }
+
+    // Check for Rule
+    if (currentLine.startsWith('Rule:')) {
+      const name = currentLine.substring(5).trim();
+      return { name, lineNumber: i + 1 };
     }
   }
 

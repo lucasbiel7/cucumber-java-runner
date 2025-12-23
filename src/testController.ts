@@ -7,6 +7,7 @@ import { parseFeatureFile } from './featureParser';
 import { runCucumberTestBatch, FeatureToRun } from './cucumberRunner';
 import { markChildrenFromResults, getTestErrorMessages, cleanupResultFile, hasFeatureFailures } from './resultProcessor';
 import { logger } from './logger';
+import { FeatureInfo, ScenarioInfo } from './types';
 
 /**
  * Test controller for Cucumber tests
@@ -151,7 +152,7 @@ export class CucumberTestController {
     try {
       logger.debug('createOrUpdateTest called for:', uri.fsPath);
       const document = await vscode.workspace.openTextDocument(uri);
-      const featureInfo = parseFeatureFile(document);
+      const featureInfo: FeatureInfo | null = parseFeatureFile(document);
 
       if (!featureInfo) {
         logger.debug('No feature info found for:', uri.fsPath);
@@ -182,8 +183,8 @@ export class CucumberTestController {
       this.controller.items.add(featureItem);
       this.watchedFiles.set(featureId, featureItem);
 
-      // Add scenarios as children
-      for (const scenario of featureInfo.scenarios) {
+      // Helper to create scenario item
+      const createScenarioItem = (scenario: ScenarioInfo, parent: vscode.TestItem) => {
         const scenarioId = `${featureId}:scenario:${scenario.lineNumber}`;
         const scenarioItem = this.controller.createTestItem(
           scenarioId,
@@ -196,7 +197,7 @@ export class CucumberTestController {
           scenario.lineNumber - 1, 0
         );
 
-        featureItem.children.add(scenarioItem);
+        parent.children.add(scenarioItem);
 
         // Add example rows as children of scenario
         if (scenario.examples && scenario.examples.length > 0) {
@@ -216,10 +217,42 @@ export class CucumberTestController {
             scenarioItem.children.add(exampleItem);
           }
         }
+      };
+
+      // Add scenarios as children (direct children of Feature)
+      for (const scenario of featureInfo.scenarios) {
+        createScenarioItem(scenario, featureItem);
       }
 
+      // Add rules as children
+      if (featureInfo.rules && featureInfo.rules.length > 0) {
+        for (const rule of featureInfo.rules) {
+          const ruleId = `${featureId}:rule:${rule.lineNumber}`;
+          const ruleItem = this.controller.createTestItem(
+            ruleId,
+            `Rule: ${rule.name}`,
+            uri
+          );
+
+          ruleItem.range = new vscode.Range(
+            rule.lineNumber - 1, 0,
+            rule.lineNumber - 1, 0
+          );
+
+          featureItem.children.add(ruleItem);
+
+          // Add scenarios as children of Rule
+          for (const scenario of rule.scenarios) {
+            createScenarioItem(scenario, ruleItem);
+          }
+        }
+      }
+
+      const totalScenarios = featureInfo.scenarios.length +
+        (featureInfo.rules ? featureInfo.rules.reduce((acc, rule) => acc + rule.scenarios.length, 0) : 0);
+
       const action = existingFeature ? 'Updated' : 'Added';
-      logger.debug(`${action} feature: ${featureInfo.name} with ${featureInfo.scenarios.length} scenarios`);
+      logger.debug(`${action} feature: ${featureInfo.name} with ${totalScenarios} scenarios`);
 
     } catch (error) {
       logger.error('Error parsing feature file:', error);
@@ -243,7 +276,7 @@ export class CucumberTestController {
     const testItems = request.include || this.gatherAllTests();
 
     // Filter to avoid running both parent and children
-    // If a feature is in the list, don't run its children separately
+    // If a feature/rule is in the list, don't run its children separately
     const itemsToRun = this.filterTestItems(testItems);
 
     // Always use batch mode (even for single tests)
@@ -298,24 +331,31 @@ export class CucumberTestController {
         // Extract line numbers from test item ID
         // ID formats:
         // - Feature: "path/to/file.feature"
+        // - Rule: "path/to/file.feature:rule:10"
         // - Scenario: "path/to/file.feature:scenario:5"
         // - Example: "path/to/file.feature:scenario:5:example:10"
         let lineNumber: number | undefined;
         let exampleLine: number | undefined;
 
-        const idParts = item.id.split(':scenario:');
-        if (idParts.length > 1) {
-          // This is a scenario or example
-          const afterScenario = idParts[1];
-          const exampleParts = afterScenario.split(':example:');
+        const ruleParts = item.id.split(':rule:');
+        if (ruleParts.length > 1) {
+            // It is a Rule
+            lineNumber = parseInt(ruleParts[1], 10);
+        } else {
+            const idParts = item.id.split(':scenario:');
+            if (idParts.length > 1) {
+              // This is a scenario or example
+              const afterScenario = idParts[1];
+              const exampleParts = afterScenario.split(':example:');
 
-          // Get scenario line number
-          lineNumber = parseInt(exampleParts[0], 10);
+              // Get scenario line number
+              lineNumber = parseInt(exampleParts[0], 10);
 
-          // Get example line number if present
-          if (exampleParts.length > 1) {
-            exampleLine = parseInt(exampleParts[1], 10);
-          }
+              // Get example line number if present
+              if (exampleParts.length > 1) {
+                exampleLine = parseInt(exampleParts[1], 10);
+              }
+            }
         }
 
         features.push({
@@ -388,30 +428,24 @@ export class CucumberTestController {
 
   private filterTestItems(items: readonly vscode.TestItem[]): vscode.TestItem[] {
     const filtered: vscode.TestItem[] = [];
-
-    // Collect feature IDs that are being run
-    const featureIdsToRun = new Set<string>();
-    for (const item of items) {
-      if (item.children.size > 0) {
-        // It's a feature
-        featureIdsToRun.add(item.id);
-      }
-    }
+    const runSet = new Set(items);
 
     // Filter items to avoid running both parent and children
     for (const item of items) {
-      if (item.children.size > 0) {
-        // It's a feature - always include
-        filtered.push(item);
-      } else {
-        // It's a scenario/example - only include if its feature is not in the list
-        const parts = item.id.split(':scenario:');
-        const featureId = parts[0];
+      let parent = item.parent;
+      let parentIsRunning = false;
 
-        // Only include this scenario if its parent feature is NOT being run
-        if (!featureIdsToRun.has(featureId)) {
-          filtered.push(item);
+      // Check if any ancestor is also being run
+      while (parent) {
+        if (runSet.has(parent)) {
+          parentIsRunning = true;
+          break;
         }
+        parent = parent.parent;
+      }
+
+      if (!parentIsRunning) {
+        filtered.push(item);
       }
     }
 

@@ -1,5 +1,5 @@
 /**
- * Types and interfaces for the Cucumber Java Easy Runner extension
+ * Types and interfaces for the Cucumber Java Runner extension
  */
 
 export interface ScenarioInfo {
@@ -14,9 +14,16 @@ export interface ExampleInfo {
   data: string;
 }
 
+export interface RuleInfo {
+  name: string;
+  scenarios: ScenarioInfo[];
+  lineNumber: number;
+}
+
 export interface FeatureInfo {
   name: string;
   scenarios: ScenarioInfo[];
+  rules: RuleInfo[];
   filePath: string;
   lineNumber: number;
 }

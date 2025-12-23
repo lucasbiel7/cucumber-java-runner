@@ -3,6 +3,8 @@
  */
 import * as vscode from 'vscode';
 import * as path from 'path';
+import { parseFeatureFile } from './featureParser';
+import { ScenarioInfo } from './types';
 
 /**
  * CodeLens provider for Cucumber feature files - with compact buttons
@@ -25,105 +27,98 @@ export class CucumberCodeLensProvider implements vscode.CodeLensProvider {
       return codeLenses;
     }
 
-    const text = document.getText();
-    const lines = text.split('\n');
+    const featureInfo = parseFeatureFile(document);
 
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
+    if (!featureInfo) {
+      return codeLenses;
+    }
 
-      if (line.startsWith('Feature:')) {
-        // Position the button at the very beginning of the line
-        const range = new vscode.Range(i, 0, i, 0);
-        codeLenses.push(new vscode.CodeLens(range, {
-          title: '$(play-circle) ',
-          tooltip: 'Click to run the entire feature file',
-          command: 'cucumberJavaRunner.runFeatureCodeLens',
-          arguments: [document.uri]
-        }));
-        codeLenses.push(new vscode.CodeLens(range, {
-          title: '$(debug-alt) ',
-          tooltip: 'Click to debug the entire feature file',
-          command: 'cucumberJavaRunner.debugFeatureCodeLens',
-          arguments: [document.uri]
-        }));
-      } else if (line.startsWith('Scenario:') || line.startsWith('Scenario Outline:')) {
-        // Position the button at the very beginning of the line
-        const range = new vscode.Range(i, 0, i, 0);
-        codeLenses.push(new vscode.CodeLens(range, {
-          title: '$(play) ',
-          tooltip: 'Click to run this scenario',
-          command: 'cucumberJavaRunner.runScenarioCodeLens',
-          arguments: [document.uri, i + 1] // 1-indexed line number
-        }));
-        codeLenses.push(new vscode.CodeLens(range, {
-          title: '$(debug-alt) ',
-          tooltip: 'Click to debug this scenario',
-          command: 'cucumberJavaRunner.debugScenarioCodeLens',
-          arguments: [document.uri, i + 1] // 1-indexed line number
-        }));
-      } else if (line.startsWith('|') && i > 0) {
-        // Check if this is an example row (not header)
-        const exampleInfo = this.findExampleRowInfo(lines, i);
-        if (exampleInfo) {
-          const range = new vscode.Range(i, 0, i, 0);
-          codeLenses.push(new vscode.CodeLens(range, {
-            title: '$(play) ',
-            tooltip: 'Click to run this example row',
-            command: 'cucumberJavaRunner.runExampleCodeLens',
-            arguments: [document.uri, exampleInfo.scenarioLine, i + 1] // scenario line and example line
-          }));
-          codeLenses.push(new vscode.CodeLens(range, {
-            title: '$(debug-alt) ',
-            tooltip: 'Click to debug this example row',
-            command: 'cucumberJavaRunner.debugExampleCodeLens',
-            arguments: [document.uri, exampleInfo.scenarioLine, i + 1] // scenario line and example line
-          }));
-        }
+    // Add CodeLens for Feature
+    this.addFeatureCodeLens(codeLenses, document.uri, featureInfo.lineNumber);
+
+    // Add CodeLens for direct Scenarios
+    this.addScenarioLenses(codeLenses, document.uri, featureInfo.scenarios);
+
+    // Add CodeLens for Rules and their Scenarios
+    if (featureInfo.rules) {
+      for (const rule of featureInfo.rules) {
+        this.addRuleCodeLens(codeLenses, document.uri, rule.lineNumber);
+        this.addScenarioLenses(codeLenses, document.uri, rule.scenarios);
       }
     }
 
     return codeLenses;
   }
 
-  private findExampleRowInfo(lines: string[], currentLine: number): { scenarioLine: number } | null {
-    // Go backwards to find Examples heading
-    let examplesLine = -1;
-    let headerLine = -1;
+  private addFeatureCodeLens(codeLenses: vscode.CodeLens[], uri: vscode.Uri, lineNumber: number): void {
+    const range = new vscode.Range(lineNumber - 1, 0, lineNumber - 1, 0);
+    codeLenses.push(new vscode.CodeLens(range, {
+      title: '$(play-circle) ',
+      tooltip: 'Click to run the entire feature file',
+      command: 'cucumberJavaRunner.runFeatureCodeLens',
+      arguments: [uri]
+    }));
+    codeLenses.push(new vscode.CodeLens(range, {
+      title: '$(debug-alt) ',
+      tooltip: 'Click to debug the entire feature file',
+      command: 'cucumberJavaRunner.debugFeatureCodeLens',
+      arguments: [uri]
+    }));
+  }
 
-    for (let i = currentLine; i >= 0; i--) {
-      const line = lines[i].trim();
-      if (line.startsWith('Examples:')) {
-        examplesLine = i;
-        break;
+  private addRuleCodeLens(codeLenses: vscode.CodeLens[], uri: vscode.Uri, lineNumber: number): void {
+    const range = new vscode.Range(lineNumber - 1, 0, lineNumber - 1, 0);
+    codeLenses.push(new vscode.CodeLens(range, {
+      title: '$(play) ',
+      tooltip: 'Click to run this rule',
+      command: 'cucumberJavaRunner.runScenarioCodeLens',
+      arguments: [uri, lineNumber]
+    }));
+    codeLenses.push(new vscode.CodeLens(range, {
+      title: '$(debug-alt) ',
+      tooltip: 'Click to debug this rule',
+      command: 'cucumberJavaRunner.debugScenarioCodeLens',
+      arguments: [uri, lineNumber]
+    }));
+  }
+
+  private addScenarioLenses(codeLenses: vscode.CodeLens[], uri: vscode.Uri, scenarios: ScenarioInfo[]): void {
+    for (const scenario of scenarios) {
+      const range = new vscode.Range(scenario.lineNumber - 1, 0, scenario.lineNumber - 1, 0);
+
+      // Scenario CodeLens
+      codeLenses.push(new vscode.CodeLens(range, {
+        title: '$(play) ',
+        tooltip: 'Click to run this scenario',
+        command: 'cucumberJavaRunner.runScenarioCodeLens',
+        arguments: [uri, scenario.lineNumber]
+      }));
+      codeLenses.push(new vscode.CodeLens(range, {
+        title: '$(debug-alt) ',
+        tooltip: 'Click to debug this scenario',
+        command: 'cucumberJavaRunner.debugScenarioCodeLens',
+        arguments: [uri, scenario.lineNumber]
+      }));
+
+      // Examples CodeLens
+      if (scenario.examples && scenario.examples.length > 0) {
+        for (const example of scenario.examples) {
+          const exampleRange = new vscode.Range(example.lineNumber - 1, 0, example.lineNumber - 1, 0);
+
+          codeLenses.push(new vscode.CodeLens(exampleRange, {
+            title: '$(play) ',
+            tooltip: 'Click to run this example row',
+            command: 'cucumberJavaRunner.runExampleCodeLens',
+            arguments: [uri, scenario.lineNumber, example.lineNumber]
+          }));
+          codeLenses.push(new vscode.CodeLens(exampleRange, {
+            title: '$(debug-alt) ',
+            tooltip: 'Click to debug this example row',
+            command: 'cucumberJavaRunner.debugExampleCodeLens',
+            arguments: [uri, scenario.lineNumber, example.lineNumber]
+          }));
+        }
       }
     }
-
-    if (examplesLine === -1) {
-      return null;
-    }
-
-    // Find the header row (first | line after Examples)
-    for (let i = examplesLine + 1; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (line.startsWith('|')) {
-        headerLine = i;
-        break;
-      }
-    }
-
-    // Current line must be after header line to be a data row
-    if (headerLine === -1 || currentLine <= headerLine) {
-      return null;
-    }
-
-    // Find the Scenario Outline
-    for (let i = examplesLine; i >= 0; i--) {
-      const line = lines[i].trim();
-      if (line.startsWith('Scenario Outline:')) {
-        return { scenarioLine: i + 1 }; // 1-indexed
-      }
-    }
-
-    return null;
   }
 }
