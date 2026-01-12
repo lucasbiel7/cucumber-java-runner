@@ -265,7 +265,6 @@ Access settings via: **Settings → Extensions → Cucumber Java Runner** or edi
 | `cucumberJavaRunner.autoCompileMaven` | boolean | `true` | Automatically compile Maven projects before running tests (only when target directory is missing). |
 | `cucumberJavaRunner.excludeBuildDirectories` | array | `["target", "build", "out", "dist", "node_modules", ".git"]` | Directories to exclude when discovering feature files to avoid duplicates. |
 | `cucumberJavaRunner.additionalGluePaths` | array | `[]` | Additional glue paths for step definitions (e.g., from external libraries). Use Java package format. |
-| `cucumberJavaRunner.enableCoverage` | boolean | `false` | Enable code coverage collection using JaCoCo when running tests. Coverage reports will be generated in `target/coverage/` directory. |
 | `cucumberJavaRunner.jacocoVersion` | string | `"0.8.11"` | JaCoCo agent version to use for code coverage. The agent JAR will be cached in `target/jacoco/` directory. |
 | `cucumberJavaRunner.coverageAppend` | boolean | `false` | Append coverage data to existing exec file instead of overwriting it. When false (default), each test run creates a fresh coverage report. |
 
@@ -315,14 +314,15 @@ Use this when you have step definitions in external libraries or modules:
 }
 ```
 
-#### Enable Code Coverage
+#### Configure Code Coverage
 ```json
 {
-  "cucumberJavaRunner.enableCoverage": true,
   "cucumberJavaRunner.jacocoVersion": "0.8.11",
   "cucumberJavaRunner.coverageAppend": false
 }
 ```
+
+**Note**: To run with coverage, use the "Run with Coverage" profile in Test Explorer or the coverage commands in the context menu. No need to enable it in settings.
 
 **Coverage Append Modes:**
 - `false` (default): Each test run shows coverage for that specific test only (recommended)

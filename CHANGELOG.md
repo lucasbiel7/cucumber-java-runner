@@ -6,6 +6,25 @@ All notable changes to the Cucumber Java Runner extension will be documented in 
 
 ---
 
+## [1.0.18] - 2026-01-12
+
+### 🔧 Improvements
+
+#### Documentation and Configuration Cleanup
+- **Removed unused `enableCoverage` setting**: Coverage is controlled by selecting "Run with Coverage" profile in Test Explorer, not via a global setting
+- **Simplified configuration**: Only meaningful settings remain (`jacocoVersion` and `coverageAppend`)
+- **Updated documentation**: README and CHANGELOG now reflect the actual configuration options
+
+### 🐛 Bug Fixes
+
+#### Coverage Accumulation Fix
+- **Fixed coverage accumulation issue**: When `coverageAppend=false`, coverage data is now properly isolated per test run
+- **Added cleanup mechanisms**: Old `.exec` files and report directories are cleaned before each run
+- **Maven integration fix**: Specify exact exec file to Maven via `-Djacoco.dataFile` parameter
+- **Three-layer protection**: Ensures no unwanted coverage accumulation
+
+---
+
 ## [1.0.17] - 2026-01-12
 
 ### ✨ Features
@@ -30,9 +49,10 @@ All notable changes to the Cucumber Java Runner extension will be documented in 
 - CodeLens buttons with 📊 icon for coverage execution
 
 #### New Settings
-- `cucumberJavaRunner.enableCoverage`: Enable/disable code coverage collection (default: false)
 - `cucumberJavaRunner.jacocoVersion`: JaCoCo agent version to use (default: "0.8.11")
 - `cucumberJavaRunner.coverageAppend`: Append coverage data instead of overwriting (default: false)
+
+**Note**: Coverage is activated by selecting the "Run with Coverage" profile in Test Explorer, not via a setting.
 
 #### Technical Implementation
 - **New module**: `jacocoManager.ts` handles agent download, XML parsing, and coverage data generation

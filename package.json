@@ -2,7 +2,7 @@
   "name": "cucumber-java-runner",
   "displayName": "Cucumber Java Runner",
   "description": "VS Code/Cursor extension for running Cucumber Feature files in Java projects",
-  "version": "1.0.17",
+  "version": "1.0.18",
   "publisher": "lucasbiel7",
   "author": {
     "name": "lucasbiel7"
@@ -251,25 +251,18 @@
           "order": 6,
           "markdownDescription": "Control how much information the extension logs:\n- **error**: Only critical errors\n- **warn**: Warnings + errors\n- **info**: General info + warnings + errors (default)\n- **debug**: Detailed debug info (recommended for troubleshooting)\n- **trace**: Very detailed step-by-step execution"
         },
-        "cucumberJavaRunner.enableCoverage": {
-          "type": "boolean",
-          "default": false,
-          "description": "Enable code coverage collection using JaCoCo when running tests.",
-          "order": 7,
-          "markdownDescription": "When enabled, tests will run with JaCoCo code coverage agent. Coverage reports will be generated in `target/coverage/` directory.\n\n**Note**: Requires JaCoCo to be available in your project dependencies or Maven will download it automatically."
-        },
         "cucumberJavaRunner.jacocoVersion": {
           "type": "string",
           "default": "0.8.11",
           "description": "JaCoCo agent version to use for code coverage (default: 0.8.11).",
-          "order": 8,
+          "order": 7,
           "markdownDescription": "Specify the JaCoCo version to download and use for coverage. The agent JAR will be cached in `target/jacoco/` directory."
         },
         "cucumberJavaRunner.coverageAppend": {
           "type": "boolean",
           "default": false,
           "description": "Append coverage data to existing exec file instead of overwriting it.",
-          "order": 9,
+          "order": 8,
           "markdownDescription": "When enabled, coverage data from multiple test runs will be accumulated in the same exec file.\n\n- **false (default)**: Each test run creates a fresh coverage report (recommended to see coverage of specific tests)\n- **true**: Coverage data is accumulated across multiple runs (useful for overall project coverage)"
         }
       }
