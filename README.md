@@ -16,6 +16,13 @@ This is an enhanced version of the original [Cucumber Java Easy Runner](https://
 
 ### 🚀 Major Enhancements
 
+- **📊 Code Coverage with Inline Visualization (v1.0.17)**: Full JaCoCo integration with VS Code Test Coverage API
+  - 🎨 **Inline coverage display**: See covered/uncovered lines directly in the editor with color indicators
+  - 📈 **Coverage metrics**: View coverage percentage in Test Explorer, file explorer, and Test Coverage panel
+  - 🔍 **Detailed insights**: Hover over lines to see execution counts
+  - 🎯 **Smart modes**: Choose between per-test coverage or accumulated coverage
+  - ⚙️ **Zero configuration**: Automatic JaCoCo agent download and Maven integration
+  - 🚀 **Native integration**: Uses VS Code's official Test Coverage API for consistent UX
 - **⚡ Lightning-Fast Test Results (v1.0.14)**: 50x faster result processing
   - 🚀 **Instant feedback**: Results appear in ~200ms instead of up to 10 seconds
   - 🎯 **Simplified logic**: Removed unnecessary retry loops and polling
@@ -147,14 +154,66 @@ When you run an entire feature file:
 - You can see at a glance which scenarios passed and which failed
 - Click on failed scenarios to see error details
 
-### 3. Debugging
+### 3. Code Coverage
+
+Run your tests with code coverage to see which classes are being tested with **inline coverage visualization**:
+
+1. **Via Test Explorer**: Click the dropdown next to the play button and select "Run with Coverage"
+2. **Via Context Menu**: Right-click on a feature file → "Cucumber: Run Feature with Coverage"
+3. **Via CodeLens** (if enabled): Click the 📊 icon next to any feature, scenario, or example
+
+**What you get:**
+- ✅ **Inline coverage in editor**: Covered lines shown in green, uncovered in red
+- 📊 **Coverage percentage**: Displayed in Test Explorer and file explorer
+- 🎯 **Detailed metrics**: Hover over lines to see execution count
+- 📁 **Coverage view**: See all files with coverage data in the Test Coverage panel
+
+**How it works:**
+1. Tests run with JaCoCo agent automatically attached
+2. Coverage data is collected in `target/coverage/jacoco-{timestamp}.exec`
+3. Maven generates XML report automatically (`mvn jacoco:report`)
+4. Coverage is parsed and displayed inline in VS Code
+
+**Requirements:**
+- Maven with JaCoCo plugin configured in `pom.xml`
+- JaCoCo agent is automatically downloaded on first use (cached in `target/jacoco/`)
+- Coverage is not available in debug mode
+
+**Example `pom.xml` configuration:**
+```xml
+<build>
+  <plugins>
+    <plugin>
+      <groupId>org.jacoco</groupId>
+      <artifactId>jacoco-maven-plugin</artifactId>
+      <version>0.8.11</version>
+      <executions>
+        <execution>
+          <goals>
+            <goal>prepare-agent</goal>
+          </goals>
+        </execution>
+        <execution>
+          <id>report</id>
+          <phase>test</phase>
+          <goals>
+            <goal>report</goal>
+          </goals>
+        </execution>
+      </executions>
+    </plugin>
+  </plugins>
+</build>
+```
+
+### 4. Debugging
 
 - Right-click any test → "Debug Test"
 - Set breakpoints in your step definitions
 - Step through your code with full debugging support
 - Even in debug mode, tests are marked with correct pass/fail status after execution
 
-### 4. CodeLens Play Buttons (Optional)
+### 5. CodeLens Play Buttons (Optional)
 
 If you prefer the traditional approach with play buttons in feature files:
 
@@ -184,7 +243,7 @@ Feature: Shopping Cart
       | user1    | pass123  | Welcome!  |
 ```
 
-### 5. Context Menu Options
+### 6. Context Menu Options
 
 You can also right-click on feature files:
 
@@ -206,6 +265,9 @@ Access settings via: **Settings → Extensions → Cucumber Java Runner** or edi
 | `cucumberJavaRunner.autoCompileMaven` | boolean | `true` | Automatically compile Maven projects before running tests (only when target directory is missing). |
 | `cucumberJavaRunner.excludeBuildDirectories` | array | `["target", "build", "out", "dist", "node_modules", ".git"]` | Directories to exclude when discovering feature files to avoid duplicates. |
 | `cucumberJavaRunner.additionalGluePaths` | array | `[]` | Additional glue paths for step definitions (e.g., from external libraries). Use Java package format. |
+| `cucumberJavaRunner.enableCoverage` | boolean | `false` | Enable code coverage collection using JaCoCo when running tests. Coverage reports will be generated in `target/coverage/` directory. |
+| `cucumberJavaRunner.jacocoVersion` | string | `"0.8.11"` | JaCoCo agent version to use for code coverage. The agent JAR will be cached in `target/jacoco/` directory. |
+| `cucumberJavaRunner.coverageAppend` | boolean | `false` | Append coverage data to existing exec file instead of overwriting it. When false (default), each test run creates a fresh coverage report. |
 
 ### Configuration Examples
 
@@ -252,6 +314,19 @@ Use this when you have step definitions in external libraries or modules:
   ]
 }
 ```
+
+#### Enable Code Coverage
+```json
+{
+  "cucumberJavaRunner.enableCoverage": true,
+  "cucumberJavaRunner.jacocoVersion": "0.8.11",
+  "cucumberJavaRunner.coverageAppend": false
+}
+```
+
+**Coverage Append Modes:**
+- `false` (default): Each test run shows coverage for that specific test only (recommended)
+- `true`: Accumulate coverage across multiple test runs for overall project coverage
 
 #### Enable CodeLens Buttons
 ```json

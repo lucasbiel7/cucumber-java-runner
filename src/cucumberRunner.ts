@@ -7,6 +7,7 @@ import * as fs from 'fs';
 import { findGluePath, resolveMavenClasspath } from './mavenResolver';
 import { logger } from './logger';
 import { waitForValidJsonFile } from './resultFileUtils';
+import { ensureJacocoAgent, buildJacocoVmArgs, generateCoverageData } from './jacocoManager';
 
 /**
  * Result of a test execution with detailed scenario results
@@ -14,6 +15,7 @@ import { waitForValidJsonFile } from './resultFileUtils';
 export interface TestExecutionResult {
   passed: boolean;
   resultFile?: string;
+  coverageData?: Map<string, vscode.FileCoverage>;
 }
 
 /**
@@ -30,11 +32,13 @@ export interface FeatureToRun {
  * Runs multiple features in a single Cucumber execution (batch mode)
  * @param features - Array of features to run
  * @param isDebug - Whether to run in debug mode (default: false)
+ * @param withCoverage - Whether to collect code coverage (default: false)
  * @returns TestExecutionResult with pass/fail status and result file path
  */
 export async function runCucumberTestBatch(
   features: FeatureToRun[],
-  isDebug = false
+  isDebug = false,
+  withCoverage = false
 ): Promise<TestExecutionResult> {
   if (features.length === 0) {
     return { passed: false };
@@ -69,14 +73,16 @@ export async function runCucumberTestBatch(
         projectRoot,
         features,
         [userInput],
-        isDebug
+        isDebug,
+        withCoverage
       );
     } else {
       return await executeCucumberTestBatch(
         projectRoot,
         features,
         gluePaths,
-        isDebug
+        isDebug,
+        withCoverage
       );
     }
   } catch (error: unknown) {
@@ -92,13 +98,15 @@ export async function runCucumberTestBatch(
  * @param lineNumber - Optional line number for scenario
  * @param exampleLine - Optional line number for example
  * @param isDebug - Whether to run in debug mode (default: false)
+ * @param withCoverage - Whether to collect code coverage (default: false)
  * @returns TestExecutionResult with pass/fail status and result file path
  */
 export async function runCucumberTest(
   uri: vscode.Uri,
   lineNumber?: number,
   exampleLine?: number,
-  isDebug = false
+  isDebug = false,
+  withCoverage = false
 ): Promise<TestExecutionResult> {
   // Use batch mode with a single feature
   const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
@@ -116,7 +124,8 @@ export async function runCucumberTest(
       lineNumber: lineNumber,
       exampleLine: exampleLine
     }],
-    isDebug
+    isDebug,
+    withCoverage
   );
 }
 
@@ -128,9 +137,10 @@ async function executeCucumberTestBatch(
   projectRoot: string,
   features: FeatureToRun[],
   gluePaths: string[],
-  isDebug = false
+  isDebug = false,
+  withCoverage = false
 ): Promise<TestExecutionResult> {
-  const configPrefix = isDebug ? 'Cucumber Debug: ' : 'Cucumber: ';
+  const configPrefix = isDebug ? 'Cucumber Debug: ' : withCoverage ? 'Cucumber Coverage: ' : 'Cucumber: ';
 
   // Generate config name based on what's being run
   let configName: string;
@@ -191,7 +201,7 @@ async function executeCucumberTestBatch(
   ].join(' ');
 
   // Use VS Code debug API for both run and debug modes
-  return await runWithVSCode(workspaceFolder, configName, classPaths, cucumberArgs, projectRoot, resultFile, isDebug);
+  return await runWithVSCode(workspaceFolder, configName, classPaths, cucumberArgs, projectRoot, resultFile, isDebug, withCoverage);
 }
 
 /**
@@ -204,8 +214,50 @@ async function runWithVSCode(
   cucumberArgs: string,
   projectRoot: string,
   resultFile: string,
-  isDebug: boolean
+  isDebug: boolean,
+  withCoverage: boolean
 ): Promise<TestExecutionResult> {
+  let vmArgs = `-Dfile.encoding=UTF-8`;
+  let executionId: string | undefined;
+  let coverageExecFile: string | undefined;
+
+  // Setup JaCoCo if coverage is enabled
+  if (withCoverage && !isDebug) {
+    try {
+      const jacocoConfig = vscode.workspace.getConfiguration('cucumberJavaRunner');
+      const jacocoVersion = jacocoConfig.get<string>('jacocoVersion', '0.8.11');
+
+      logger.info(`Setting up JaCoCo coverage (version ${jacocoVersion})...`);
+
+      const agentPath = await vscode.window.withProgress({
+        location: vscode.ProgressLocation.Notification,
+        title: 'Setting up code coverage...',
+        cancellable: false
+      }, async () => await ensureJacocoAgent(projectRoot, jacocoVersion));
+
+      executionId = Date.now().toString();
+
+      // Get append setting from configuration
+      const appendCoverage = jacocoConfig.get<boolean>('coverageAppend', false);
+
+      const jacocoResult = buildJacocoVmArgs(projectRoot, agentPath, executionId, appendCoverage);
+      vmArgs = `${vmArgs} ${jacocoResult.vmArgs}`;
+
+      coverageExecFile = jacocoResult.execFile;
+
+      logger.info('Coverage collection enabled');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      logger.error(`Failed to setup coverage: ${errorMessage}`);
+      vscode.window.showWarningMessage(`Failed to setup coverage: ${errorMessage}. Running without coverage.`);
+      withCoverage = false;
+    }
+  } else if (withCoverage && isDebug) {
+    logger.warn('Coverage is not supported in debug mode. Running without coverage.');
+    vscode.window.showWarningMessage('Coverage is not supported in debug mode.');
+    withCoverage = false;
+  }
+
   const config: vscode.DebugConfiguration = {
     type: 'java',
     name: configName,
@@ -215,7 +267,7 @@ async function runWithVSCode(
     cwd: '${workspaceFolder}',
     args: cucumberArgs,
     classPaths: classPaths,
-    vmArgs: `-Dfile.encoding=UTF-8`,
+    vmArgs: vmArgs,
     console: 'integratedTerminal',
     noDebug: !isDebug,
     stopOnEntry: false,
@@ -243,10 +295,20 @@ async function runWithVSCode(
         // Check and parse results
         const testPassed = await checkCucumberResults(resultFile);
 
+        // Generate coverage data if coverage was enabled
+        let coverageData: Map<string, vscode.FileCoverage> | undefined;
+        if (withCoverage && coverageExecFile) {
+          // Get append setting to pass to coverage generation
+          const config = vscode.workspace.getConfiguration('cucumberJavaRunner');
+          const appendCoverage = config.get<boolean>('coverageAppend', false);
+          coverageData = await generateCoverageData(projectRoot, coverageExecFile, appendCoverage);
+        }
+
         // Return result with file path (don't clean up yet - testController might need it)
         resolve({
           passed: testPassed,
-          resultFile: resultFile
+          resultFile: resultFile,
+          coverageData: coverageData
         });
       }
     });

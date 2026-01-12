@@ -64,6 +64,12 @@ export class CucumberCodeLensProvider implements vscode.CodeLensProvider {
       command: 'cucumberJavaRunner.debugFeatureCodeLens',
       arguments: [uri]
     }));
+    codeLenses.push(new vscode.CodeLens(range, {
+      title: '$(graph) ',
+      tooltip: 'Click to run the entire feature file with coverage',
+      command: 'cucumberJavaRunner.runFeatureWithCoverageCodeLens',
+      arguments: [uri]
+    }));
   }
 
   private addRuleCodeLens(codeLenses: vscode.CodeLens[], uri: vscode.Uri, lineNumber: number): void {
@@ -78,6 +84,12 @@ export class CucumberCodeLensProvider implements vscode.CodeLensProvider {
       title: '$(debug-alt) ',
       tooltip: 'Click to debug this rule',
       command: 'cucumberJavaRunner.debugScenarioCodeLens',
+      arguments: [uri, lineNumber]
+    }));
+    codeLenses.push(new vscode.CodeLens(range, {
+      title: '$(graph) ',
+      tooltip: 'Click to run this rule with coverage',
+      command: 'cucumberJavaRunner.runScenarioWithCoverageCodeLens',
       arguments: [uri, lineNumber]
     }));
   }
@@ -99,6 +111,12 @@ export class CucumberCodeLensProvider implements vscode.CodeLensProvider {
         command: 'cucumberJavaRunner.debugScenarioCodeLens',
         arguments: [uri, scenario.lineNumber]
       }));
+      codeLenses.push(new vscode.CodeLens(range, {
+        title: '$(graph) ',
+        tooltip: 'Click to run this scenario with coverage',
+        command: 'cucumberJavaRunner.runScenarioWithCoverageCodeLens',
+        arguments: [uri, scenario.lineNumber]
+      }));
 
       // Examples CodeLens
       if (scenario.examples && scenario.examples.length > 0) {
@@ -115,6 +133,12 @@ export class CucumberCodeLensProvider implements vscode.CodeLensProvider {
             title: '$(debug-alt) ',
             tooltip: 'Click to debug this example row',
             command: 'cucumberJavaRunner.debugExampleCodeLens',
+            arguments: [uri, scenario.lineNumber, example.lineNumber]
+          }));
+          codeLenses.push(new vscode.CodeLens(exampleRange, {
+            title: '$(graph) ',
+            tooltip: 'Click to run this example row with coverage',
+            command: 'cucumberJavaRunner.runExampleWithCoverageCodeLens',
             arguments: [uri, scenario.lineNumber, example.lineNumber]
           }));
         }

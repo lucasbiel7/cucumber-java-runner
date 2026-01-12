@@ -8,6 +8,7 @@ import { runCucumberTestBatch, FeatureToRun } from './cucumberRunner';
 import { markChildrenFromResults, getTestErrorMessages, cleanupResultFile, hasFeatureFailures } from './resultProcessor';
 import { logger } from './logger';
 import { FeatureInfo, ScenarioInfo } from './types';
+import { loadDetailedCoverage } from './jacocoManager';
 
 /**
  * Test controller for Cucumber tests
@@ -47,7 +48,7 @@ export class CucumberTestController {
     this.controller.createRunProfile(
       'Run Cucumber Tests',
       vscode.TestRunProfileKind.Run,
-      (request, token) => this.executeTests(request, token, false),
+      (request, token) => this.executeTests(request, token, false, false),
       true
     );
 
@@ -55,9 +56,22 @@ export class CucumberTestController {
     this.controller.createRunProfile(
       'Debug Cucumber Tests',
       vscode.TestRunProfileKind.Debug,
-      (request, token) => this.executeTests(request, token, true),
+      (request, token) => this.executeTests(request, token, true, false),
       true
     );
+
+    // Set up test coverage handler
+    const coverageProfile = this.controller.createRunProfile(
+      'Run with Coverage',
+      vscode.TestRunProfileKind.Coverage,
+      (request, token) => this.executeTests(request, token, false, true),
+      true
+    );
+
+    // Set up loadDetailedCoverage handler
+    coverageProfile.loadDetailedCoverage = async (_testRun, fileCoverage) => {
+      return loadDetailedCoverage(fileCoverage);
+    };
 
     // Add refresh button to test controller
     this.controller.refreshHandler = () => {
@@ -270,7 +284,7 @@ export class CucumberTestController {
     }
   }
 
-  private async executeTests(request: vscode.TestRunRequest, token: vscode.CancellationToken, isDebug: boolean) {
+  private async executeTests(request: vscode.TestRunRequest, token: vscode.CancellationToken, isDebug: boolean, withCoverage = false) {
     const run = this.controller.createTestRun(request);
 
     const testItems = request.include || this.gatherAllTests();
@@ -280,7 +294,7 @@ export class CucumberTestController {
     const itemsToRun = this.filterTestItems(testItems);
 
     // Always use batch mode (even for single tests)
-    await this.executeBatchTests(itemsToRun, run, isDebug, token);
+    await this.executeBatchTests(itemsToRun, run, isDebug, withCoverage, token);
 
     run.end();
   }
@@ -301,6 +315,7 @@ export class CucumberTestController {
     testItems: vscode.TestItem[],
     run: vscode.TestRun,
     isDebug: boolean,
+    withCoverage: boolean,
     token: vscode.CancellationToken
   ) {
     // Mark all tests as started
@@ -371,8 +386,16 @@ export class CucumberTestController {
       }
 
       // Execute all features in a single batch
-      logger.info(`Running ${features.length} features in batch mode`);
-      const result = await runCucumberTestBatch(features, isDebug);
+      logger.info(`Running ${features.length} features in batch mode${withCoverage ? ' with coverage' : ''}`);
+      const result = await runCucumberTestBatch(features, isDebug, withCoverage);
+
+      // Add coverage data if available
+      if (withCoverage && result.coverageData) {
+        logger.info(`Adding coverage data for ${result.coverageData.size} files`);
+        for (const [, fileCoverage] of result.coverageData) {
+          run.addCoverage(fileCoverage);
+        }
+      }
 
       // Process results for each feature
       if (result.resultFile) {

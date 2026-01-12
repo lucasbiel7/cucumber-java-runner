@@ -6,6 +6,56 @@ All notable changes to the Cucumber Java Runner extension will be documented in 
 
 ---
 
+## [1.0.17] - 2026-01-12
+
+### ✨ Features
+
+#### Code Coverage Support with Inline Visualization
+- **Added JaCoCo integration**: Run tests with code coverage to see which classes are being tested
+- **Inline coverage visualization**: Covered/uncovered lines shown directly in the editor with color indicators
+- **VS Code Test Coverage API**: Full integration with VS Code's native coverage display
+- **Automatic report generation**: Maven automatically generates XML reports for coverage data
+- **Coverage metrics**: See coverage percentage in Test Explorer, file explorer, and Test Coverage view
+- **Detailed coverage info**: Hover over lines to see execution counts
+- **Automatic agent download**: JaCoCo agent is automatically downloaded and cached on first use
+- **Multiple execution modes**: Run with coverage via Test Explorer, context menu, or CodeLens
+- **Coverage profile**: New "Run with Coverage" profile in Test Explorer with `loadDetailedCoverage` support
+- **Configurable version**: Choose JaCoCo version via settings (default: 0.8.11)
+- **No debug overhead**: Coverage is disabled in debug mode to avoid conflicts
+
+#### New Commands
+- `Cucumber: Run Feature with Coverage`
+- `Cucumber: Run Scenario with Coverage`
+- `Cucumber: Run Example with Coverage`
+- CodeLens buttons with 📊 icon for coverage execution
+
+#### New Settings
+- `cucumberJavaRunner.enableCoverage`: Enable/disable code coverage collection (default: false)
+- `cucumberJavaRunner.jacocoVersion`: JaCoCo agent version to use (default: "0.8.11")
+- `cucumberJavaRunner.coverageAppend`: Append coverage data instead of overwriting (default: false)
+
+#### Technical Implementation
+- **New module**: `jacocoManager.ts` handles agent download, XML parsing, and coverage data generation
+- **XML parsing**: Uses `xml2js` to parse JaCoCo XML reports
+- **FileCoverage objects**: Creates VS Code `FileCoverage` and `StatementCoverage` objects for inline display
+- **Enhanced runner**: `cucumberRunner.ts` now supports `withCoverage` parameter and returns coverage data
+- **Updated test controller**: Implements `loadDetailedCoverage` handler for on-demand coverage details
+- **Updated signatures**: All test execution functions now accept coverage flag
+- **Coverage data**: Stored in `target/coverage/jacoco-{timestamp}.exec` and parsed from `target/site/jacoco/jacoco.xml`
+- **Agent cache**: JaCoCo agent JAR cached in `target/jacoco/` directory
+
+#### Benefits
+- ✅ **Inline visualization**: See coverage directly in the editor without opening HTML reports
+- ✅ **Native VS Code integration**: Uses VS Code's Test Coverage API for consistent UX
+- ✅ **Automatic report generation**: Maven generates XML reports automatically
+- ✅ **Detailed metrics**: Hover over lines to see execution counts
+- ✅ **Multiple views**: Coverage shown in editor, Test Explorer, file explorer, and Test Coverage panel
+- ✅ **Automatic setup**: Agent is downloaded only once and cached
+- ✅ **Flexible execution**: Run with coverage from anywhere (Test Explorer, context menu, CodeLens)
+- ✅ **Standard format**: Uses JaCoCo exec and XML formats compatible with Maven/Gradle plugins
+
+---
+
 ## [1.0.16] - 2024-12-23
 
 ### ✨ Features

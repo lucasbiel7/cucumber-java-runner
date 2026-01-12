@@ -298,6 +298,115 @@ function registerCommands(context: vscode.ExtensionContext) {
       runCucumberTest(uri, examples.lineNumber, examples.exampleLineNumber, true);
     })
   );
+
+  // ==================== Coverage Commands ====================
+
+  // Command to run feature with coverage
+  context.subscriptions.push(
+    vscode.commands.registerCommand('cucumberJavaRunner.runFeatureWithCoverage', async (uri: vscode.Uri) => {
+      let featureUri = uri;
+
+      if (!featureUri && vscode.window.activeTextEditor) {
+        featureUri = vscode.window.activeTextEditor.document.uri;
+      }
+
+      if (!featureUri) {
+        vscode.window.showErrorMessage('Please open or select a feature file.');
+        return;
+      }
+
+      runCucumberTest(featureUri, undefined, undefined, false, true);
+    })
+  );
+
+  // CodeLens command to run feature with coverage
+  context.subscriptions.push(
+    vscode.commands.registerCommand('cucumberJavaRunner.runFeatureWithCoverageCodeLens', async (uri: vscode.Uri) => {
+      logger.debug('runFeatureWithCoverageCodeLens called with URI:', uri.toString());
+      vscode.window.showInformationMessage('Feature test with coverage starting...');
+      runCucumberTest(uri, undefined, undefined, false, true);
+    })
+  );
+
+  // Command to run scenario with coverage
+  context.subscriptions.push(
+    vscode.commands.registerCommand('cucumberJavaRunner.runScenarioWithCoverage', async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor) {
+        vscode.window.showErrorMessage('Please open a feature file.');
+        return;
+      }
+
+      const uri = editor.document.uri;
+      if (path.extname(uri.fsPath) !== '.feature') {
+        vscode.window.showErrorMessage('This command only works with .feature files.');
+        return;
+      }
+
+      const currentLine = editor.selection.active.line;
+      const scenario = findScenarioAtLine(editor.document, currentLine);
+
+      if (!scenario) {
+        vscode.window.showErrorMessage('Please right-click inside a Scenario or Scenario Outline.');
+        return;
+      }
+
+      runCucumberTest(uri, scenario.lineNumber, undefined, false, true);
+    })
+  );
+
+  // CodeLens command to run scenario with coverage
+  context.subscriptions.push(
+    vscode.commands.registerCommand('cucumberJavaRunner.runScenarioWithCoverageCodeLens', async (uri: vscode.Uri, lineNumber: number) => {
+      logger.debug('runScenarioWithCoverageCodeLens called - URI:', uri.toString(), 'line:', lineNumber);
+      vscode.window.showInformationMessage(`Test with coverage starting at line ${lineNumber}...`);
+      runCucumberTest(uri, lineNumber, undefined, false, true);
+    })
+  );
+
+  // Command to run example with coverage
+  context.subscriptions.push(
+    vscode.commands.registerCommand('cucumberJavaRunner.runExampleWithCoverage', async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor) {
+        vscode.window.showErrorMessage('Please open a feature file.');
+        return;
+      }
+
+      const uri = editor.document.uri;
+      if (path.extname(uri.fsPath) !== '.feature') {
+        vscode.window.showErrorMessage('This command only works with .feature files.');
+        return;
+      }
+
+      const currentLine = editor.selection.active.line;
+      logger.debug(`runExampleWithCoverage called, line: ${currentLine}`);
+
+      const lineText = editor.document.lineAt(currentLine).text.trim();
+      if (!lineText.startsWith('|')) {
+        vscode.window.showErrorMessage('Please right-click on a data row (starting with |) in an Examples table.');
+        return;
+      }
+
+      const examples = findExampleAtLine(editor.document, currentLine);
+
+      if (!examples) {
+        vscode.window.showErrorMessage('Example row not detected. Please right-click on a data row (starting with |, not the header row) in an Examples table.');
+        return;
+      }
+
+      runCucumberTest(uri, examples.lineNumber, examples.exampleLineNumber, false, true);
+    })
+  );
+
+  // CodeLens command to run example with coverage
+  context.subscriptions.push(
+    vscode.commands.registerCommand('cucumberJavaRunner.runExampleWithCoverageCodeLens', async (uri: vscode.Uri, scenarioLine: number, exampleLine: number) => {
+      logger.debug('runExampleWithCoverageCodeLens called - URI:', uri.toString(), 'scenario line:', scenarioLine, 'example line:', exampleLine);
+      vscode.window.showInformationMessage(`Example test with coverage starting at line ${exampleLine}...`);
+      runCucumberTest(uri, scenarioLine, exampleLine, false, true);
+    })
+  );
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-function
