@@ -6,6 +6,29 @@ All notable changes to the Cucumber Java Runner extension will be documented in 
 
 ---
 
+## [1.0.20] - 2026-01-13
+
+### 📚 Documentation
+
+#### Configuration Documentation Update
+- **Updated README.md**: Complete configuration example now includes all 8 settings
+- **Added missing coverage settings**: `jacocoVersion` and `coverageAppend` now shown in complete example
+- **Improved discoverability**: Users can now see all available configuration options in one place
+
+---
+
+## [1.0.19] - 2026-01-13
+
+### 🐛 Bug Fixes
+
+#### Fixed CodeLens Buttons Not Appearing in Packaged Extension
+- **Critical fix**: CodeLens buttons (▶ Run, 🐛 Debug, 📊 Coverage) now work correctly in the packaged extension
+- **Root cause**: Production dependencies (`xml2js`, `sax`, `xmlbuilder`) were being excluded from the `.vsix` package
+- **Solution**: Updated `.vscodeignore` to include required production dependencies
+- **Impact**: Extension now works identically in both development and production environments
+
+---
+
 ## [1.0.18] - 2026-01-12
 
 ### 🔧 Improvements

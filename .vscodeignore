@@ -5,8 +5,11 @@
 src/**
 tsconfig.json
 
-# Node modules
+# Node modules - exclude dev dependencies but include production dependencies
 node_modules/**
+!node_modules/xml2js/**
+!node_modules/sax/**
+!node_modules/xmlbuilder/**
 
 # Build files
 *.vsix

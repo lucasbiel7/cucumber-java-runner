@@ -367,7 +367,9 @@ View logs in **Output Panel → Cucumber Java Runner**.
   ],
   "cucumberJavaRunner.additionalGluePaths": [
     "com.mycompany.shared.steps"
-  ]
+  ],
+  "cucumberJavaRunner.jacocoVersion": "0.8.11",
+  "cucumberJavaRunner.coverageAppend": false
 }
 ```
 
